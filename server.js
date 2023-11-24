@@ -6,7 +6,7 @@ const shell = require('shelljs')
 const mariadb = require('mariadb')
 const pool = mariadb.createPool({
   host: '192.168.0.79',
-  user: 'em-client',
+  user: 'cm-client',
   password: process.env.DB_PASSWORD,
   connectionLimit: 5
 })
@@ -28,13 +28,70 @@ app.get('/', (req, res) => {
 })
 
 app.get('/api/create', (req, res) => {
-  console.log(`${logTimestamp} Creating Server on Port 7778`)
-  shell.exec('/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port 7778', {async:true})
-  console.log(`${logTimestamp} Server Created`)
-  res.sendStatus(200)
+  let lobbyID = makeID(5)
+  let createdServerPort
+  pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('USE corruptedmemory')
+        .then(() => {
+          conn
+            .query('SELECT Port FROM Lobbies ORDER BY Port DESC')
+            .then((rows) => {
+              if (rows.length === 0) {
+                createdServerPort = 7777
+              } else {
+                createdServerPort = rows[0].Port + 1
+              }
+              console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
+            })
+            .then(() => {
+              return conn.query('INSERT INTO Lobbies value (?, ?)', [lobbyID, createdServerPort])
+            })
+            .then((response) => {
+              console.log(response)
+              console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
+              shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort}`, { async: true })
+              console.log(`${logTimestamp} Server Created`)
+              res.sendStatus(200)
+              conn.end()
+            })
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+    })
 })
 
-app.get('/api/lobbies', (req, res) => {})
+app.get('/api/lobbies', (req, res) => {
+  pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('USE corruptedmemory')
+        .then(() => {
+          return conn.query('SELECT * FROM Lobbies')
+        })
+        .then((rows) => {
+          res.send(rows)
+          conn.end()
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+    })
+})
 
 app.all('*', (req, res) => {
   res.sendStatus(404)
@@ -50,7 +107,29 @@ function LogConnections(req, res, next) {
 }
 
 app.listen(port, () => {
-  console.log(`${clc.green(`Listening on port ${port}`)}`)
+  console.log(`${clc.green(`${logTimestamp} Listening on port ${port}`)}`)
+  pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('USE corruptedmemory')
+        .then(() => {
+          return conn.query('DELETE FROM Lobbies')
+        })
+        .then((res) => {
+          console.log(res)
+          console.log(`${logTimestamp} Database Cleared`)
+          conn.end()
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+    })
 })
 
 var date = new Date(),
@@ -66,3 +145,15 @@ var date = new Date(),
     ('00' + date.getMinutes()).slice(-2) +
     ':' +
     ('00' + date.getSeconds()).slice(-2)
+
+function makeID(length) {
+  let result = ''
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const charactersLength = characters.length
+  let counter = 0
+  while (counter < length) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength))
+    counter += 1
+  }
+  return result
+}

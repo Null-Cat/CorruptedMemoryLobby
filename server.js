@@ -28,6 +28,7 @@ app.get('/', (req, res) => {
 })
 
 app.get('/api/create', (req, res) => {
+  console.log(`${logTimestamp} creating server`)
   cp.spawn('~/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh', [args], function (err, stdout, stderr) {
     // handle err, stdout, stderr
   })

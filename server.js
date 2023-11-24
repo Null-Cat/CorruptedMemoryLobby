@@ -37,13 +37,25 @@ app.get('/api/create', (req, res) => {
         .query('USE corruptedmemory')
         .then(() => {
           conn
-            .query('SELECT Port FROM Lobbies ORDER BY Port DESC')
+            .query('SELECT id, port FROM Lobbies ORDER BY Port DESC')
             .then((rows) => {
+              let isUnique = false
+              let generatedID = lobbyID
+              while (!isUnique) {
+                const existingID = rows.find((row) => row.id === generatedID)
+                if (existingID) {
+                  generatedID = makeID(5)
+                } else {
+                  isUnique = true
+                }
+              }
+              lobbyID = generatedID
               if (rows.length === 0) {
                 createdServerPort = 7777
               } else {
-                createdServerPort = rows[0].Port + 1
+                createdServerPort = rows[0].port + 1
               }
+
               console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
             })
             .then(() => {

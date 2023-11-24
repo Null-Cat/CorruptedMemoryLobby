@@ -54,7 +54,7 @@ app.get('/api/create', (req, res) => {
               console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
               shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort}`, { async: true })
               console.log(`${logTimestamp} Server Created`)
-              res.sendStatus(200)
+              res.send({ lobbyID: lobbyID, port: createdServerPort })
               conn.end()
             })
         })
@@ -77,6 +77,30 @@ app.get('/api/lobbies', (req, res) => {
         .query('USE corruptedmemory')
         .then(() => {
           return conn.query('SELECT * FROM Lobbies')
+        })
+        .then((rows) => {
+          res.send(rows)
+          conn.end()
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+    })
+})
+
+app.get('/api/lobbies/:id', (req, res) => {
+  pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('USE corruptedmemory')
+        .then(() => {
+          return conn.query('SELECT port FROM Lobbies WHERE LobbyID = ?', [req.params.id])
         })
         .then((rows) => {
           res.send(rows)

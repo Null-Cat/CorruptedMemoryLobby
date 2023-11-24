@@ -2,7 +2,7 @@ require('dotenv').config()
 const express = require('express')
 const fs = require('fs')
 const clc = require('cli-color')
-const cp = require('child_process')
+const shell = require('shelljs')
 const mariadb = require('mariadb')
 const pool = mariadb.createPool({
   host: '192.168.0.79',
@@ -29,7 +29,7 @@ app.get('/', (req, res) => {
 
 app.get('/api/create', (req, res) => {
   console.log(`${logTimestamp} Creating Server on Port 7777`)
-  cp.spawn('/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh', ['-log'])
+  shell.exec('/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log', {async:true})
   console.log(`${logTimestamp} Server Created`)
   res.sendStatus(200)
 })

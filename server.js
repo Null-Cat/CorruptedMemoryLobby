@@ -1,6 +1,15 @@
+require('dotenv').config()
 const express = require('express')
 const fs = require('fs')
 const clc = require('cli-color')
+const cp = require('child_process')
+const mariadb = require('mariadb')
+const pool = mariadb.createPool({
+  host: '192.168.0.79',
+  user: 'em-client',
+  password: process.env.DB_PASSWORD,
+  connectionLimit: 5
+})
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -15,8 +24,16 @@ app.use(LogConnections)
 app.use(express.static('public'))
 
 app.get('/', (req, res) => {
-    res.sendStatus(200)
+  res.sendStatus(200)
 })
+
+app.get('/api/create', (req, res) => {
+  cp.spawn('~/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh', [args], function (err, stdout, stderr) {
+    // handle err, stdout, stderr
+  })
+})
+
+app.get('/api/lobbies', (req, res) => {})
 
 app.all('*', (req, res) => {
   res.sendStatus(404)

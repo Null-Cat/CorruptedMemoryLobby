@@ -24,7 +24,7 @@ app.use(LogConnections)
 app.use(express.static('public'))
 
 app.get('/', (req, res) => {
-  res.sendStatus(200)
+  res.send('Corrupted API is running')
 })
 
 app.get('/api/create', (req, res) => {
@@ -37,7 +37,7 @@ app.get('/api/create', (req, res) => {
         .query('USE corruptedmemory')
         .then(() => {
           conn
-            .query('SELECT id, port FROM Lobbies ORDER BY Port DESC')
+            .query('SELECT id, port FROM Lobbies ORDER BY port DESC')
             .then((rows) => {
               let isUnique = false
               let generatedID = lobbyID
@@ -112,10 +112,42 @@ app.get('/api/lobbies/:id', (req, res) => {
       conn
         .query('USE corruptedmemory')
         .then(() => {
-          return conn.query('SELECT port FROM Lobbies WHERE LobbyID = ?', [req.params.id])
+          return conn.query('SELECT port FROM Lobbies WHERE id = ?', [req.params.id])
         })
         .then((rows) => {
-          res.send(rows)
+          if (rows.length === 0) {
+            res.sendStatus(404)
+          } else {
+            res.send(rows)
+          }
+          conn.end()
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+    })
+})
+
+app.get('/api/lobbies/:port', (req, res) => {
+  pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('USE corruptedmemory')
+        .then(() => {
+          return conn.query('SELECT id FROM Lobbies WHERE port = ?', [req.params.port])
+        })
+        .then((rows) => {
+          if (rows.length === 0) {
+            res.sendStatus(404)
+          } else {
+            res.send(rows)
+          }
           conn.end()
         })
         .catch((err) => {

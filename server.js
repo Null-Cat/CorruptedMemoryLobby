@@ -28,8 +28,8 @@ app.get('/', (req, res) => {
 })
 
 app.get('/api/create', (req, res) => {
-  console.log(`${logTimestamp} Creating Server on Port 7777`)
-  shell.exec('/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log', {async:true})
+  console.log(`${logTimestamp} Creating Server on Port 7778`)
+  shell.exec('/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port 7778', {async:true})
   console.log(`${logTimestamp} Server Created`)
   res.sendStatus(200)
 })

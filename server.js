@@ -28,8 +28,10 @@ app.get('/', (req, res) => {
 })
 
 app.get('/api/create', (req, res) => {
-  console.log(`${logTimestamp} creating server`)
+  console.log(`${logTimestamp} Creating Server on Port 7777`)
   cp.spawn('/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh', ['-log'])
+  console.log(`${logTimestamp} Server Created`)
+  res.sendStatus(200)
 })
 
 app.get('/api/lobbies', (req, res) => {})

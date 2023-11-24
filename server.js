@@ -29,7 +29,7 @@ app.get('/', (req, res) => {
 
 app.get('/api/create', (req, res) => {
   console.log(`${logTimestamp} creating server`)
-  cp.spawn('~/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh', ['-log'])
+  cp.spawn('/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh', ['-log'])
 })
 
 app.get('/api/lobbies', (req, res) => {})

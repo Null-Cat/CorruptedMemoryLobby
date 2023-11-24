@@ -37,7 +37,7 @@ app.get('/api/create', (req, res) => {
         .query('USE corruptedmemory')
         .then(() => {
           conn
-            .query('SELECT id, port FROM Lobbies ORDER BY port DESC')
+            .query('SELECT id, port FROM lobbies ORDER BY port DESC')
             .then((rows) => {
               let isUnique = false
               let generatedID = lobbyID
@@ -59,7 +59,7 @@ app.get('/api/create', (req, res) => {
               console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
             })
             .then(() => {
-              return conn.query('INSERT INTO Lobbies value (?, ?)', [lobbyID, createdServerPort])
+              return conn.query('INSERT INTO lobbies value (?, ?)', [lobbyID, createdServerPort])
             })
             .then((response) => {
               console.log(response)
@@ -88,7 +88,7 @@ app.get('/api/lobbies', (req, res) => {
       conn
         .query('USE corruptedmemory')
         .then(() => {
-          return conn.query('SELECT * FROM Lobbies')
+          return conn.query('SELECT * FROM lobbies')
         })
         .then((rows) => {
           res.send(rows)
@@ -112,7 +112,7 @@ app.get('/api/lobbies/:id', (req, res) => {
       conn
         .query('USE corruptedmemory')
         .then(() => {
-          return conn.query('SELECT port FROM Lobbies WHERE id = ?', [req.params.id])
+          return conn.query('SELECT port FROM lobbies WHERE id = ?', [req.params.id])
         })
         .then((rows) => {
           if (rows.length === 0) {
@@ -140,7 +140,7 @@ app.get('/api/lobbies/:port', (req, res) => {
       conn
         .query('USE corruptedmemory')
         .then(() => {
-          return conn.query('SELECT id FROM Lobbies WHERE port = ?', [req.params.port])
+          return conn.query('SELECT id FROM lobbies WHERE port = ?', [req.params.port])
         })
         .then((rows) => {
           if (rows.length === 0) {
@@ -182,7 +182,7 @@ app.listen(port, () => {
       conn
         .query('USE corruptedmemory')
         .then(() => {
-          return conn.query('DELETE FROM Lobbies')
+          return conn.query('DELETE FROM lobbies')
         })
         .then((res) => {
           console.log(res)

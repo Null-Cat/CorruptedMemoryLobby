@@ -43,7 +43,7 @@ app.get('/api/kill/:id', (req, res) => {
             res.sendStatus(404)
           } else {
             const port = rows[0].port
-            const server = listOfChildProcesses.find((server) => server.pid === port)
+            const server = listOfChildProcesses.find((server) => server.pid === rows[0].pid)
             if (server) {
               server.kill()
               console.log(`${logTimestamp} Server ${req.params.id} killed`)
@@ -70,6 +70,7 @@ app.get('/api/kill/:id', (req, res) => {
 app.get('/api/create', (req, res) => {
   let lobbyID = makeID(5)
   let createdServerPort
+  let server
   pool
     .getConnection()
     .then((conn) => {
@@ -94,17 +95,17 @@ app.get('/api/create', (req, res) => {
           }
 
           console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
+          server = shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort}`, { async: true })
+          listOfChildProcesses.push(server)
+          console.log(`${logTimestamp} Server Created`)
         })
         .then(() => {
-          return conn.query('INSERT INTO lobbies value (?, ?, ?)', [lobbyID, createdServerPort, null])
+          return conn.query('INSERT INTO lobbies value (?, ?, ?, ?)', [lobbyID, createdServerPort, null, server.pid])
         })
         .then((response) => {
           console.log(response)
           console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
-          let server = shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort}`, { async: true })
-          listOfChildProcesses.push(server)
-          console.log(`${logTimestamp} Server Created`)
-          res.send({ lobbyID: lobbyID, port: createdServerPort })
+          res.send({ lobbyID: lobbyID, port: createdServerPort, pid: server.pid})
           conn.end()
         })
         .catch((err) => {

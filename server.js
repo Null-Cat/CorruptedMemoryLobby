@@ -2,20 +2,22 @@ require('dotenv').config()
 const express = require('express')
 const fs = require('fs')
 const clc = require('cli-color')
+const jwt = require('jsonwebtoken')
 const shell = require('shelljs')
 const mariadb = require('mariadb')
 const pool = mariadb.createPool({
   host: '192.168.0.79',
   user: 'cm-client',
+  database: 'corruptedmemory',
   password: process.env.DB_PASSWORD,
-  connectionLimit: 5
+  connectionLimit: 10
 })
 
 const app = express()
 const port = process.env.PORT || 4000
 
-// app.set('view engine', 'ejs')
-// app.set('views', './views')
+app.set('view engine', 'ejs')
+app.set('views', './views')
 app.enable('trust proxy')
 app.use(express.urlencoded({ extended: true }))
 
@@ -217,11 +219,8 @@ var date = new Date(),
 function makeID(length) {
   let result = ''
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  const charactersLength = characters.length
-  let counter = 0
-  while (counter < length) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength))
-    counter += 1
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length))
   }
   return result
 }

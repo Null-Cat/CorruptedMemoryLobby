@@ -32,6 +32,41 @@ app.get('/', (req, res) => {
   console.log(listOfChildProcesses)
 })
 
+app.get('/api/kill/:id', (req, res) => {
+  pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('SELECT port FROM lobbies WHERE id = ?', [req.params.id])
+        .then((rows) => {
+          if (rows.length === 0) {
+            res.sendStatus(404)
+          } else {
+            const port = rows[0].port
+            const server = listOfChildProcesses.find((server) => server.pid === port)
+            if (server) {
+              server.kill()
+              console.log(`${logTimestamp} Server ${req.params.id} killed`)
+              res.sendStatus(200)
+            } else {
+              res.sendStatus(404)
+            }
+          }
+          conn.end()
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          res.sendStatus(500)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      res.sendStatus(500)
+    })
+})
+
 app.get('/api/create', (req, res) => {
   let lobbyID = makeID(5)
   let createdServerPort

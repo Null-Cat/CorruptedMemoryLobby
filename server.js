@@ -16,6 +16,8 @@ const pool = mariadb.createPool({
 const app = express()
 const port = process.env.PORT || 4000
 
+var listOfChildProcesses = []
+
 app.set('view engine', 'ejs')
 app.set('views', './views')
 app.enable('trust proxy')
@@ -26,7 +28,7 @@ app.use(LogConnections)
 app.use(express.static('public'))
 
 app.get('/', (req, res) => {
-  res.send('Corrupted API is running')
+  res.send(listOfChildProcesses)
 })
 
 app.get('/api/create', (req, res) => {
@@ -63,7 +65,8 @@ app.get('/api/create', (req, res) => {
         .then((response) => {
           console.log(response)
           console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
-          shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort}`, { async: true })
+          let server = shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort}`, { async: true })
+          listOfChildProcesses.push(server)
           console.log(`${logTimestamp} Server Created`)
           res.send({ lobbyID: lobbyID, port: createdServerPort })
           conn.end()

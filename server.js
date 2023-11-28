@@ -61,7 +61,7 @@ app.get('/api/create', (req, res) => {
           console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
         })
         .then(() => {
-          return conn.query('INSERT INTO lobbies value (?, ?)', [lobbyID, createdServerPort, null])
+          return conn.query('INSERT INTO lobbies value (?, ?, ?)', [lobbyID, createdServerPort, null])
         })
         .then((response) => {
           console.log(response)

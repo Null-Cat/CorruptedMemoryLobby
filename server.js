@@ -37,7 +37,7 @@ app.get('/api/kill/:id', (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT port FROM lobbies WHERE id = ?', [req.params.id])
+        .query('SELECT pid FROM lobbies WHERE id = ?', [req.params.id])
         .then((rows) => {
           if (rows.length === 0) {
             res.sendStatus(404)

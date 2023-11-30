@@ -25,5 +25,8 @@
     "mariadb": "^3.2.2",
     "shelljs": "^0.8.5",
     "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }

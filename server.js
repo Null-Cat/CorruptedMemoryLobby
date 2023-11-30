@@ -1,5 +1,8 @@
 require('dotenv').config()
 const express = require('express')
+const app = express()
+const server = require('http').createServer(app)
+const io = require('socket.io')(server, { cors: { origin: '*' } })
 const fs = require('fs')
 const clc = require('cli-color')
 const jwt = require('jsonwebtoken')
@@ -13,7 +16,6 @@ const pool = mariadb.createPool({
   connectionLimit: 10
 })
 
-const app = express()
 const port = process.env.PORT || 4000
 
 var listOfChildProcesses = []
@@ -211,7 +213,7 @@ function LogConnections(req, res, next) {
   next()
 }
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`${clc.green(`${logTimestamp} Listening on port ${port}`)}`)
   pool
     .getConnection()
@@ -234,6 +236,15 @@ app.listen(port, () => {
       console.log(err)
       res.sendStatus(500)
     })
+})
+
+io.on('connection', (socket) => {
+  console.log(`${logTimestamp} New Socket Connection ${clc.green(`${socket.id}`)}`)
+  const referer = new URL(socket.request.headers.referer)
+  
+  socket.on('disconnect', () => {
+    console.log(`${logTimestamp} ${clc.red(`Socket Disconnected ${socket.id}`)}`)
+  })
 })
 
 var date = new Date(),

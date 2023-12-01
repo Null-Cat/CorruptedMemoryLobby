@@ -27,12 +27,12 @@ function authenticateJWT(req, res, next) {
   if (authHeader) {
     const token = authHeader.split(' ')[1]
 
-    jwt.verify(token, jwtSecret, (err, user) => {
+    jwt.verify(token, jwtSecret, async (err, user) => {
       if (err) {
         console.log(`${logTimestamp} ${clc.red('Invalid/Unauthorized Token')}`)
         return res.sendStatus(403)
       }
-      mariadbPool.pool
+      await mariadbPool.pool
         .getConnection()
         .then((conn) => {
           conn

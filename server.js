@@ -62,7 +62,7 @@ server.listen(port, () => {
 
 io.on('connection', (socket) => {
   console.log(`${logTimestamp} New Socket Connection ${clc.green(`${socket.id}`)}`)
-  const referer = new URL(socket.request.headers.referer)
+  //const referer = new URL(socket.request.headers.referer)
 
   socket.on('disconnect', () => {
     console.log(`${logTimestamp} ${clc.red(`Socket Disconnected ${socket.id}`)}`)

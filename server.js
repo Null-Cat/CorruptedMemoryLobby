@@ -6,7 +6,7 @@ const io = require('socket.io')(server, { cors: { origin: '*' } })
 const clc = require('cli-color')
 const jwt = require('jsonwebtoken')
 const mariadbPool = require('./utilities/mariadbPool')
-const {logTimestamp} = require('./utilities/utilities')
+const { logTimestamp, authenticateJWT } = require('./utilities/utilities')
 
 const port = process.env.PORT || 4000
 

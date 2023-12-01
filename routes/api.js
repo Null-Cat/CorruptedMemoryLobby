@@ -6,7 +6,7 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const mariadbPool = require('../utilities/mariadbPool')
-const { logTimestamp, getIP, authenticateJWT } = require('../utilities/utilities')
+const { logTimestamp, getIP, authenticateJWT, hasPerms } = require('../utilities/utilities')
 
 const router = express.Router()
 
@@ -15,6 +15,11 @@ router.get('/', (req, res) => {
 })
 
 router.get('/create', authenticateJWT, (req, res) => {
+  if (!hasPerms(['CREATE_LOBBY'], req.user)) {
+    console.log(`${logTimestamp} ${clc.red(`${req.user.username} does not have permission to create a lobby`)}`)
+    res.sendStatus(403)
+    return
+  }
   let lobbyID = makeID(5)
   let createdServerPort
   let server
@@ -234,6 +239,7 @@ router.post('/logout', express.json(), authenticateJWT, (req, res) => {
 })
 
 router.post('/register', express.json(), (req, res) => {
+  defaultPerms = { perms: ['CREATE_LOBBY', 'JOIN_LOBBY', 'DELETE_ACCOUNT'] }
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
@@ -252,7 +258,7 @@ router.post('/register', express.json(), (req, res) => {
               })
               .then((hash) => {
                 conn
-                  .query('INSERT INTO players VALUES (?, ?, ?, ?, NOW())', [crypto.randomUUID(), req.body.username, hash, null])
+                  .query('INSERT INTO players VALUES (?, ?, ?, ?, ?, NOW())', [crypto.randomUUID(), req.body.username, hash, defaultPerms, null])
                   .then((response) => {
                     console.log(`${logTimestamp} Registration for ${req.body.username}`)
                     res.sendStatus(200)
@@ -271,6 +277,35 @@ router.post('/register', express.json(), (req, res) => {
                 conn.end()
               })
           }
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          res.sendStatus(500)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      res.sendStatus(500)
+    })
+})
+
+router.delete('/delete', authenticateJWT, (req, res) => {
+  if (!hasPerms(['DELETE_ACCOUNT'], req.user)) {
+    console.log(`${logTimestamp} ${clc.red(`${req.user.username} does not have permission to delete their account`)}`)
+    res.sendStatus(403)
+    return
+  }
+  mariadbPool.pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('DELETE FROM players WHERE username = ?', [req.user.username])
+        .then((rows) => {
+          console.log(`${logTimestamp} ${req.user.username} Deleted`)
+          res.sendStatus(200)
+          conn.end()
         })
         .catch((err) => {
           //handle error

@@ -186,7 +186,7 @@ router.post('/login', express.json(), (req, res) => {
                       console.error(err.message)
                     })
                   const token = jwt.sign({ username: req.body.username }, process.env.JWT_SECRET, { expiresIn: '1d' })
-                  res.send({ token: token })
+                  res.send({ user: req.body.username, token: token })
                   conn.end()
                 } else {
                   console.log(`${clc.red(`${logTimestamp} Invalid Password for ${req.body.username}`)}`)

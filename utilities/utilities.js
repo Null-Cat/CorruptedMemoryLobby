@@ -65,8 +65,8 @@ function authenticateJWT(req, res, next) {
   }
 }
 
-function hasPerms(requiredPerms, user) {
-  mariadbPool.pool
+async function hasPerms(requiredPerms, user) {
+  await mariadbPool.pool
     .getConnection()
     .then((conn) => {
       conn

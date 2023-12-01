@@ -86,6 +86,7 @@ function hasPerms(requiredPerms, user) {
               }
             }
             conn.end()
+            console.log(`${logTimestamp} ${clc.green('Valid Permissions')}`)
             return true
           }
         })

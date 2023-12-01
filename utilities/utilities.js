@@ -65,4 +65,39 @@ function authenticateJWT(req, res, next) {
   }
 }
 
-module.exports = { logTimestamp, getIP, authenticateJWT }
+function hasPerms(requiredPerms, user) {
+  mariadbPool.pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('SELECT perms FROM players WHERE username = ?', [user.username])
+        .then((rows) => {
+          if (rows.length == 0) {
+            console.log(`${logTimestamp} ${clc.red('Invalid Username')}`)
+            conn.end()
+            return false
+          } else {
+            var perms = rows[0].perms
+            for (var i = 0; i < requiredPerms.length; i++) {
+              if (!perms.includes(requiredPerms[i])) {
+                console.log(`${logTimestamp} ${clc.red('Invalid Permissions')}`)
+                conn.end()
+                return false
+              }
+            }
+            conn.end()
+            return true
+          }
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+    })
+}
+
+module.exports = { logTimestamp, getIP, authenticateJWT, hasPerms }

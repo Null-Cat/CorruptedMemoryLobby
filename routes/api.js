@@ -22,7 +22,6 @@ router.get('/create', authenticateJWT, (req, res) => {
   }
   let lobbyID = makeID(5)
   let createdServerPort
-  let server
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
@@ -47,7 +46,7 @@ router.get('/create', authenticateJWT, (req, res) => {
           }
 
           console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
-          server = shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort}`, { async: true })
+          shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort}`, { async: true })
           console.log(`${logTimestamp} Server Created`)
         })
         .then(() => {
@@ -56,7 +55,7 @@ router.get('/create', authenticateJWT, (req, res) => {
         .then((response) => {
           console.log(response)
           console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
-          res.send({ lobbyID: lobbyID, port: createdServerPort, pid: server.pid })
+          res.send({ lobbyID: lobbyID, port: createdServerPort })
           conn.end()
         })
         .catch((err) => {

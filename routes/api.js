@@ -1,8 +1,12 @@
 require('dotenv').config()
 const express = require('express')
 const shell = require('shelljs')
+const clc = require('cli-color')
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+const crypto = require('crypto')
 const mariadbPool = require('../utilities/mariadbPool')
-const { logTimestamp } = require('../utilities/utilities')
+const { logTimestamp, getIP, authenticateJWT } = require('../utilities/utilities')
 
 const router = express.Router()
 
@@ -10,7 +14,7 @@ router.get('/', (req, res) => {
   res.send('API Running')
 })
 
-router.get('/create', (req, res) => {
+router.get('/create', authenticateJWT, (req, res) => {
   let lobbyID = makeID(5)
   let createdServerPort
   let server
@@ -86,7 +90,7 @@ router.get('/lobbies', (req, res) => {
     })
 })
 
-router.get('/lobbies/:id', (req, res) => {
+router.get('/lobbies/id/:id', (req, res) => {
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
@@ -113,7 +117,7 @@ router.get('/lobbies/:id', (req, res) => {
     })
 })
 
-router.get('/lobbies/:port', (req, res) => {
+router.get('/lobbies/port/:port', (req, res) => {
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
@@ -126,6 +130,147 @@ router.get('/lobbies/:port', (req, res) => {
             res.send(rows)
           }
           conn.end()
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          res.sendStatus(500)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      res.sendStatus(500)
+    })
+})
+
+router.post('/login', express.json(), (req, res) => {
+  mariadbPool.pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('SELECT password FROM players WHERE username = ?', [req.body.username])
+        .then((rows) => {
+          if (rows.length === 0) {
+            console.log(`${clc.red(`${logTimestamp} Invalid Username ${req.body.username}`)}`)
+            res.sendStatus(404)
+            conn.end()
+          } else {
+            bcrypt
+              .compare(req.body.password, rows[0].password)
+              .then((passwordCompareResult) => {
+                if (passwordCompareResult) {
+                  console.log(`${logTimestamp} Login for ${clc.green(req.body.username)}`)
+                  conn.query('UPDATE players SET lastLogin = NOW() WHERE username = ?', [req.body.username]).catch((err) => {
+                    console.error(err.message)
+                  })
+                  conn
+                    .query('SELECT 1 FROM sessions WHERE username = ?', [req.body.username])
+                    .then((response) => {
+                      if (response.length > 0) {
+                        conn.query('UPDATE sessions SET ip = ? WHERE username = ?', [getIP(req), req.body.username]).catch((err) => {
+                          console.error(err.message)
+                        })
+                      } else {
+                        conn.query('INSERT INTO sessions VALUES (?, ?, ?)', [crypto.randomUUID(), req.body.username, getIP(req)]).catch((err) => {
+                          console.error(err.message)
+                        })
+                      }
+                    })
+                    .catch((err) => {
+                      console.error(err.message)
+                    })
+                  const token = jwt.sign({ username: req.body.username }, process.env.JWT_SECRET, { expiresIn: '1d' })
+                  res.send({ token: token })
+                  conn.end()
+                } else {
+                  console.log(`${clc.red(`${logTimestamp} Invalid Password for ${req.body.username}`)}`)
+                  res.sendStatus(401)
+                  conn.end()
+                }
+              })
+              .catch((err) => {
+                console.error(err.message)
+                res.sendStatus(500)
+                conn.end()
+              })
+          }
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          res.sendStatus(500)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      res.sendStatus(500)
+    })
+})
+
+router.post('/logout', express.json(), authenticateJWT, (req, res) => {
+  mariadbPool.pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('DELETE FROM sessions WHERE username = ?', [req.user.username])
+        .then((rows) => {
+          console.log(`${logTimestamp} Logout for ${req.user.username}`)
+          res.sendStatus(200)
+          conn.end()
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          res.sendStatus(500)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      res.sendStatus(500)
+    })
+})
+
+router.post('/register', express.json(), (req, res) => {
+  mariadbPool.pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('SELECT 1 FROM players WHERE username = ?', [req.body.username])
+        .then((rows) => {
+          if (rows.length > 0) {
+            console.log(`${clc.red(`${logTimestamp} Username ${req.body.username} Already Exists`)}`)
+            res.sendStatus(409)
+            conn.end()
+          } else {
+            bcrypt
+              .genSalt(10)
+              .then((salt) => {
+                return bcrypt.hash(req.body.password, salt)
+              })
+              .then((hash) => {
+                conn
+                  .query('INSERT INTO players VALUES (?, ?, ?, ?, NOW())', [crypto.randomUUID(), req.body.username, hash, null])
+                  .then((response) => {
+                    console.log(`${logTimestamp} Registration for ${req.body.username}`)
+                    res.sendStatus(200)
+                    conn.end()
+                  })
+                  .catch((err) => {
+                    //handle error
+                    console.log(err)
+                    res.sendStatus(500)
+                    conn.end()
+                  })
+              })
+              .catch((err) => {
+                console.error(err.message)
+                res.sendStatus(500)
+                conn.end()
+              })
+          }
         })
         .catch((err) => {
           //handle error

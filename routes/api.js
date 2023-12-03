@@ -46,7 +46,7 @@ router.get('/create', authenticateJWT, (req, res) => {
           }
 
           console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
-          shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort}`, { async: true })
+          shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort} -lobbyID=${lobbyID}`, { async: true })
           console.log(`${logTimestamp} Server Created`)
         })
         .then(() => {

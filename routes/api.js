@@ -14,8 +14,8 @@ router.get('/', (req, res) => {
   res.send('API Running')
 })
 
-router.get('/create', authenticateJWT, (req, res) => {
-  if (!hasPerms(['CREATE_LOBBY'], req.user)) {
+router.get('/create', authenticateJWT, async (req, res) => {
+  if (!(await hasPerms(['CREATE_LOBBY'], req.user))) {
     console.log(`${logTimestamp} ${clc.red(`${req.user.username} does not have permission to create a lobby`)}`)
     res.sendStatus(403)
     return

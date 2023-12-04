@@ -81,12 +81,9 @@ async function hasPerms(requiredPerms, user) {
             for (var i = 0; i < requiredPerms.length; i++) {
               if (!perms.includes(requiredPerms[i])) {
                 console.log(`${logTimestamp} User ${user.username} has ${clc.red('Invalid')} ${requiredPerms.join(', ')} Permissions`)
-                conn.end()
                 return false
               }
             }
-            conn.end()
-            
             console.log(`${logTimestamp} User ${user.username} has ${clc.green('Valid')} ${requiredPerms.join(', ')} Permissions`)
             return true
           }
@@ -96,6 +93,7 @@ async function hasPerms(requiredPerms, user) {
           console.log(err)
           conn.end()
         })
+      conn.end()
     })
     .catch((err) => {
       console.log(err)

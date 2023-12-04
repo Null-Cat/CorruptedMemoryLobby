@@ -39,7 +39,7 @@ function authenticateJWT(req, res, next) {
             .query('SELECT 1 FROM sessions WHERE username = ?', [user.username])
             .then((rows) => {
               if (rows.length == 0) {
-                console.log(`${logTimestamp} ${clc.red('Session Expired')}`)
+                console.log(`${logTimestamp} Session ${clc.red('Expired')}`)
                 return res.sendStatus(401)
               }
               conn.end()
@@ -73,20 +73,21 @@ async function hasPerms(requiredPerms, user) {
         .query('SELECT perms FROM players WHERE username = ?', [user.username])
         .then((rows) => {
           if (rows.length == 0) {
-            console.log(`${logTimestamp} ${clc.red('Invalid Username')}`)
+            console.log(`${logTimestamp} ${clc.red('Invalid')} Username`)
             conn.end()
             return false
           } else {
             var perms = rows[0].perms
             for (var i = 0; i < requiredPerms.length; i++) {
               if (!perms.includes(requiredPerms[i])) {
-                console.log(`${logTimestamp} ${clc.red('Invalid Permissions')}`)
+                console.log(`${logTimestamp} User ${user.username} has ${clc.red('Invalid')} ${requiredPerms.join(', ')} Permissions`)
                 conn.end()
                 return false
               }
             }
             conn.end()
-            console.log(`${logTimestamp} ${clc.green('Valid Permissions')}`)
+            
+            console.log(`${logTimestamp} User ${user.username} has ${clc.green('Valid')} ${requiredPerms.join(', ')} Permissions`)
             return true
           }
         })

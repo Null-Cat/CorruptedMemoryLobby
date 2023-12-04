@@ -164,7 +164,7 @@ router.post('/login', express.json(), (req, res) => {
               .compare(req.body.password, rows[0].password)
               .then((passwordCompareResult) => {
                 if (passwordCompareResult) {
-                  console.log(`${logTimestamp} Login for ${clc.green(req.body.username)}`)
+                  console.log(`${logTimestamp} ${clc.inverse('Login')} ${clc.green(req.body.username)}`)
                   conn.query('UPDATE players SET lastLogin = NOW() WHERE username = ?', [req.body.username]).catch((err) => {
                     console.error(err.message)
                   })
@@ -220,7 +220,7 @@ router.post('/logout', express.json(), authenticateJWT, (req, res) => {
       conn
         .query('DELETE FROM sessions WHERE username = ?', [req.user.username])
         .then((rows) => {
-          console.log(`${logTimestamp} Logout for ${req.user.username}`)
+          console.log(`${logTimestamp} ${clc.inverse('Logout')} ${req.user.username}`)
           res.sendStatus(200)
           conn.end()
         })

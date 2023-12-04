@@ -61,17 +61,17 @@ server.listen(port, () => {
 })
 
 io.on('connection', (socket) => {
-  console.log(`${logTimestamp} New Socket Connection ${clc.green(`${socket.id}`)}`)
+  console.log(`${logTimestamp} New Socket Connection ${clc.magenta(`${socket.id}`)}`)
   //const referer = new URL(socket.request.headers.referer)
 
   socket.on('authority', (authorityData) => {
     socket.join(authorityData.lobbyID)
-    console.log(`${logTimestamp} ${clc.green(`${socket.id}`)} Joined ${clc.green(`${authorityData.lobbyID}`)}`)
+    console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Joined ${clc.magenta(`${authorityData.lobbyID}`)}`)
     socket.to(authorityData.lobbyID).emit('authority', authorityData)
-    console.log(`${logTimestamp} ${clc.yellow(`${authorityData.secret}`)} ${clc.green('Authority')} Confirmed`)
+    console.log(`${logTimestamp} ${clc.yellow(`${authorityData.secret}`)} Authority ${clc.green('Confirmed')}`)
   })
 
   socket.on('disconnect', () => {
-    console.log(`${logTimestamp} ${clc.red(`Socket Disconnected ${socket.id}`)}`)
+    console.log(`${logTimestamp} Socket ${clc.red(`Disconnected`)} ${clc.magenta(socket.id)}`)
   })
 })

@@ -66,7 +66,8 @@ function authenticateJWT(req, res, next) {
 }
 
 async function hasPerms(requiredPerms, user) {
-  await mariadbPool.pool
+  return pr = new Promise(function(resolve, reject) {
+  mariadbPool.pool
     .getConnection()
     .then((conn) => {
       conn
@@ -75,16 +76,19 @@ async function hasPerms(requiredPerms, user) {
           if (rows.length == 0) {
             console.log(`${logTimestamp} ${clc.red('Invalid')} Username`)
             conn.end()
+            reject()
             return false
           } else {
             var perms = rows[0].perms
             for (var i = 0; i < requiredPerms.length; i++) {
               if (!perms.includes(requiredPerms[i])) {
                 console.log(`${logTimestamp} User ${clc.bold(user.username)} has ${clc.red('Invalid')} ${requiredPerms.join(', ')} Permissions`)
+                reject()
                 return false
               }
             }
             console.log(`${logTimestamp} User ${user.username} has ${clc.green('Valid')} ${requiredPerms.join(', ')} Permissions`)
+            resolve(true)
             return true
           }
         })
@@ -93,11 +97,10 @@ async function hasPerms(requiredPerms, user) {
           console.log(err)
           conn.end()
         })
-      conn.end()
     })
     .catch((err) => {
       console.log(err)
     })
+})
 }
-
 module.exports = { logTimestamp, getIP, authenticateJWT, hasPerms }

@@ -152,13 +152,20 @@ router.post('/login', express.json(), (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT password FROM players WHERE username = ?', [req.body.username])
+        .query('SELECT username, password FROM players WHERE username = ?', [req.body.username])
         .then((rows) => {
           if (rows.length === 0) {
-            console.log(`${clc.red(`${logTimestamp} Invalid Username ${req.body.username}`)}`)
+            console.log(`${logTimestamp} ${clc.red(`Invalid Username ${req.body.username}`)}`)
             res.sendStatus(404)
             conn.end()
           } else {
+            if (!(req.body.username == rows[0].username))
+            {
+              console.log(`${logTimestamp} ${clc.red(`Invalid Username ${req.body.username}`)}`)
+              res.sendStatus(404)
+              conn.end()
+              return
+            }
             bcrypt
               .compare(req.body.password, rows[0].password)
               .then((passwordCompareResult) => {
@@ -265,7 +272,7 @@ router.post('/register', express.json(), (req, res) => {
                   .query('INSERT INTO players VALUES (?, ?, ?, ?, ?, NOW())', [crypto.randomUUID(), req.body.username, hash, defaultPerms, null])
                   .then((response) => {
                     console.log(`${logTimestamp} Registration ${clc.bold(req.body.username)}`)
-                    res.sendStatus(200)
+                    res.sendStatus(201)
                     conn.end()
                   })
                   .catch((err) => {

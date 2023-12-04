@@ -16,7 +16,6 @@ router.get('/', (req, res) => {
 
 router.get('/create', authenticateJWT, async (req, res) => {
   if (!(await hasPerms(['CREATE_LOBBY'], req.user))) {
-    console.log(`${logTimestamp} ${clc.red(`${req.user.username} does not have permission to create a lobby`)}`)
     res.sendStatus(403)
     return
   }
@@ -164,7 +163,7 @@ router.post('/login', express.json(), (req, res) => {
               .compare(req.body.password, rows[0].password)
               .then((passwordCompareResult) => {
                 if (passwordCompareResult) {
-                  console.log(`${logTimestamp} ${clc.inverse('Login')} ${clc.green(req.body.username)}`)
+                  console.log(`${logTimestamp} ${clc.green('Login')} ${clc.bold(req.body.username)}`)
                   conn.query('UPDATE players SET lastLogin = NOW() WHERE username = ?', [req.body.username]).catch((err) => {
                     console.error(err.message)
                   })
@@ -220,7 +219,7 @@ router.post('/logout', express.json(), authenticateJWT, (req, res) => {
       conn
         .query('DELETE FROM sessions WHERE username = ?', [req.user.username])
         .then((rows) => {
-          console.log(`${logTimestamp} ${clc.inverse('Logout')} ${req.user.username}`)
+          console.log(`${logTimestamp} ${clc.red('Logout')} ${clc.bold(req.user.username)}`)
           res.sendStatus(200)
           conn.end()
         })
@@ -239,6 +238,12 @@ router.post('/logout', express.json(), authenticateJWT, (req, res) => {
 
 router.post('/register', express.json(), (req, res) => {
   defaultPerms = { perms: ['CREATE_LOBBY', 'JOIN_LOBBY', 'DELETE_ACCOUNT'] }
+  req.body.username = req.body.username.trim()
+  if (req.body.username.includes(' ')) {
+    console.log(`${clc.red(`${logTimestamp} Username Cannot Contain Spaces`)}`)
+    res.sendStatus(400)
+    return
+  }
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
@@ -246,7 +251,7 @@ router.post('/register', express.json(), (req, res) => {
         .query('SELECT 1 FROM players WHERE username = ?', [req.body.username])
         .then((rows) => {
           if (rows.length > 0) {
-            console.log(`${clc.red(`${logTimestamp} Username ${req.body.username} Already Exists`)}`)
+            console.log(`${clc.red(`${logTimestamp} Username ${clc.bold(req.body.username)} Already Exists`)}`)
             res.sendStatus(409)
             conn.end()
           } else {
@@ -259,7 +264,7 @@ router.post('/register', express.json(), (req, res) => {
                 conn
                   .query('INSERT INTO players VALUES (?, ?, ?, ?, ?, NOW())', [crypto.randomUUID(), req.body.username, hash, defaultPerms, null])
                   .then((response) => {
-                    console.log(`${logTimestamp} Registration for ${req.body.username}`)
+                    console.log(`${logTimestamp} Registration ${clc.bold(req.body.username)}`)
                     res.sendStatus(200)
                     conn.end()
                   })
@@ -290,9 +295,8 @@ router.post('/register', express.json(), (req, res) => {
     })
 })
 
-router.delete('/delete', authenticateJWT, (req, res) => {
-  if (!hasPerms(['DELETE_ACCOUNT'], req.user)) {
-    console.log(`${logTimestamp} ${clc.red(`${req.user.username} does not have permission to delete their account`)}`)
+router.delete('/delete', authenticateJWT, async (req, res) => {
+  if (!(await hasPerms(['DELETE_ACCOUNT'], req.user))) {
     res.sendStatus(403)
     return
   }
@@ -302,7 +306,7 @@ router.delete('/delete', authenticateJWT, (req, res) => {
       conn
         .query('DELETE FROM players WHERE username = ?', [req.user.username])
         .then((rows) => {
-          console.log(`${logTimestamp} ${req.user.username} Deleted`)
+          console.log(`${logTimestamp} ${clc.bold(req.user.username)} Deleted`)
           res.sendStatus(200)
           conn.end()
         })

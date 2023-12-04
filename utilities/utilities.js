@@ -29,7 +29,7 @@ function authenticateJWT(req, res, next) {
 
     jwt.verify(token, jwtSecret, async (err, user) => {
       if (err) {
-        console.log(`${logTimestamp} ${clc.red('Invalid/Unauthorized Token')}`)
+        console.log(`${logTimestamp} ${clc.bold(user.username)} ${clc.red('Invalid/Unauthorized Token')}`)
         return res.sendStatus(403)
       }
       await mariadbPool.pool
@@ -39,7 +39,7 @@ function authenticateJWT(req, res, next) {
             .query('SELECT 1 FROM sessions WHERE username = ?', [user.username])
             .then((rows) => {
               if (rows.length == 0) {
-                console.log(`${logTimestamp} Session ${clc.red('Expired')}`)
+                console.log(`${logTimestamp} ${clc.bold(user.username)} Session ${clc.red('Expired')}`)
                 return res.sendStatus(401)
               }
               conn.end()
@@ -55,7 +55,7 @@ function authenticateJWT(req, res, next) {
           console.log(err)
           res.sendStatus(500)
         })
-      console.log(`${logTimestamp} ${user.username} ${clc.green('Authenticated')}`)
+      console.log(`${logTimestamp} ${clc.bold(user.username)} ${clc.green('Authenticated')}`)
       req.user = user
       next()
     })
@@ -80,7 +80,7 @@ async function hasPerms(requiredPerms, user) {
             var perms = rows[0].perms
             for (var i = 0; i < requiredPerms.length; i++) {
               if (!perms.includes(requiredPerms[i])) {
-                console.log(`${logTimestamp} User ${user.username} has ${clc.red('Invalid')} ${requiredPerms.join(', ')} Permissions`)
+                console.log(`${logTimestamp} User ${clc.bold(user.username)} has ${clc.red('Invalid')} ${requiredPerms.join(', ')} Permissions`)
                 return false
               }
             }

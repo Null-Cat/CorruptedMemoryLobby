@@ -269,7 +269,7 @@ router.post('/register', express.json(), (req, res) => {
               })
               .then((hash) => {
                 conn
-                  .query('INSERT INTO players VALUES (?, ?, ?, ?, ?, NOW())', [crypto.randomUUID(), req.body.username, hash, defaultPerms, null])
+                  .query('INSERT INTO players VALUES (?, ?, ?, ?, ?, NOW(), NOW())', [crypto.randomUUID(), req.body.username, hash, defaultPerms, null])
                   .then((response) => {
                     console.log(`${logTimestamp} Registration ${clc.bold(req.body.username)}`)
                     res.sendStatus(201)

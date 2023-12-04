@@ -175,14 +175,14 @@ router.post('/login', express.json(), (req, res) => {
                     console.error(err.message)
                   })
                   conn
-                    .query('SELECT 1 FROM sessions WHERE username = ?', [req.body.username])
+                    .query('SELECT guid FROM sessions, players WHERE username = ?', [req.body.username])
                     .then((response) => {
                       if (response.length > 0) {
-                        conn.query('UPDATE sessions SET ip = ? WHERE username = ?', [getIP(req), req.body.username]).catch((err) => {
+                        conn.query('UPDATE sessions SET ip = ? FROM players WHERE username = ?', [getIP(req), req.body.username]).catch((err) => {
                           console.error(err.message)
                         })
                       } else {
-                        conn.query('INSERT INTO sessions VALUES (?, ?, ?)', [crypto.randomUUID(), req.body.username, getIP(req)]).catch((err) => {
+                        conn.query('INSERT INTO sessions VALUES (?, ?, ?)', [crypto.randomUUID(), response[0].guid, getIP(req)]).catch((err) => {
                           console.error(err.message)
                         })
                       }
@@ -224,7 +224,7 @@ router.post('/logout', express.json(), authenticateJWT, (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('DELETE FROM sessions WHERE username = ?', [req.user.username])
+        .query('DELETE sessions FROM sessions INNER JOIN players WHERE sessions.usernameGUID = players.guid AND username = ?', [req.user.username])
         .then((rows) => {
           console.log(`${logTimestamp} ${clc.red('Logout')} ${clc.bold(req.user.username)}`)
           res.sendStatus(200)

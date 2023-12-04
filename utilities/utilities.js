@@ -75,21 +75,23 @@ async function hasPerms(requiredPerms, user) {
         .then((rows) => {
           if (rows.length == 0) {
             console.log(`${logTimestamp} ${clc.red('Invalid')} Username`)
+            resolve(false)
             conn.end()
-            reject()
-            return false
+            return
           } else {
             var perms = rows[0].perms
             for (var i = 0; i < requiredPerms.length; i++) {
               if (!perms.includes(requiredPerms[i])) {
                 console.log(`${logTimestamp} User ${clc.bold(user.username)} has ${clc.red('Invalid')} ${requiredPerms.join(', ')} Permissions`)
-                reject()
-                return false
+                resolve(false)
+                conn.end()
+                return
               }
             }
             console.log(`${logTimestamp} User ${user.username} has ${clc.green('Valid')} ${requiredPerms.join(', ')} Permissions`)
             resolve(true)
-            return true
+            conn.end()
+            return
           }
         })
         .catch((err) => {

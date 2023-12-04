@@ -25,37 +25,53 @@ router.get('/create', authenticateJWT, async (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT id, port FROM lobbies ORDER BY port DESC')
-        .then((rows) => {
-          let isUnique = false
-          let generatedID = lobbyID
-          while (!isUnique) {
-            const existingID = rows.find((row) => row.id === generatedID)
-            if (existingID) {
-              generatedID = makeID(5)
-            } else {
-              isUnique = true
-            }
+        .query('SELECT 1 FROM players WHERE lobbyid IS NOT NULL AND username = ?', [req.user.username])
+        .then((lobbyIDForUserRows) => {
+          if (lobbyIDForUserRows.length > 0) {
+            console.log(`${logTimestamp} ${clc.bold(req.user.username)} ${clc.red('Already in a Lobby')}`)
+            res.sendStatus(409)
+            conn.end()
+            return
           }
-          lobbyID = generatedID
-          if (rows.length === 0) {
-            createdServerPort = 7777
-          } else {
-            createdServerPort = rows[0].port + 1
-          }
+          conn
+            .query('SELECT id, port FROM lobbies ORDER BY port DESC')
+            .then((rows) => {
+              let isUnique = false
+              let generatedID = lobbyID
+              while (!isUnique) {
+                const existingID = rows.find((row) => row.id === generatedID)
+                if (existingID) {
+                  generatedID = makeID(5)
+                } else {
+                  isUnique = true
+                }
+              }
+              lobbyID = generatedID
+              if (rows.length === 0) {
+                createdServerPort = 7777
+              } else {
+                createdServerPort = rows[0].port + 1
+              }
 
-          console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
-          shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort} -lobbyID=${lobbyID}`, { async: true })
-          console.log(`${logTimestamp} Server Created`)
-        })
-        .then(() => {
-          return conn.query('INSERT INTO lobbies value (?, ?, ?)', [lobbyID, createdServerPort, null])
-        })
-        .then((response) => {
-          console.log(response)
-          console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
-          res.send({ lobbyID: lobbyID, port: createdServerPort })
-          conn.end()
+              console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
+              shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort} -lobbyID=${lobbyID}`, { async: true })
+              console.log(`${logTimestamp} Server Created`)
+            })
+            .then(() => {
+              return conn.query('INSERT INTO lobbies value (?, ?, ?)', [lobbyID, createdServerPort, null])
+            })
+            .then((response) => {
+              console.log(response)
+              console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
+              res.send({ lobbyID: lobbyID, port: createdServerPort })
+              conn.end()
+            })
+            .catch((err) => {
+              //handle error
+              console.log(err)
+              res.sendStatus(500)
+              conn.end()
+            })
         })
         .catch((err) => {
           //handle error
@@ -159,8 +175,7 @@ router.post('/login', express.json(), (req, res) => {
             res.sendStatus(404)
             conn.end()
           } else {
-            if (!(req.body.username == rows[0].username))
-            {
+            if (!(req.body.username == rows[0].username)) {
               console.log(`${logTimestamp} ${clc.red(`Invalid Username ${req.body.username}`)}`)
               res.sendStatus(404)
               conn.end()

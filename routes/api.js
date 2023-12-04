@@ -239,7 +239,7 @@ router.post('/logout', express.json(), authenticateJWT, (req, res) => {
 router.post('/register', express.json(), (req, res) => {
   defaultPerms = { perms: ['CREATE_LOBBY', 'JOIN_LOBBY', 'DELETE_ACCOUNT'] }
   req.body.username = req.body.username.trim()
-  if (req.body.username.includes(' ')) {
+  if (req.body.username.includes(' ') || req.body.username === '') {
     console.log(`${clc.red(`${logTimestamp} Username Cannot Contain Spaces`)}`)
     res.sendStatus(400)
     return

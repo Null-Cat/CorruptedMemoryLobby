@@ -61,31 +61,22 @@ server.listen(port, () => {
 })
 
 io.on('connection', (socket) => {
-  console.log(`${logTimestamp} New Client Socket Connection ${clc.magenta(`${socket.id}`)}`)
+  console.log(`${logTimestamp} New Socket Connection ${clc.magenta(`${socket.id}`)}`)
   //const referer = new URL(socket.request.headers.referer)
 
-  socket.on('disconnect', () => {
-    console.log(`${logTimestamp} Client Socket ${clc.red(`Disconnected`)} ${clc.magenta(socket.id)}`)
-  })
-})
-
-io.of('/server').on('connection', (socket) => {
-  console.log(`${logTimestamp} New Server Socket Connection ${clc.magenta(`${socket.id}`)}`)
-
   socket.on('authority', (authorityData) => {
-    if (authorityData.secret === process.env.CM_SECRET) {
-      console.log(`${logTimestamp} Authority ${clc.green('Confirmed')}`)
-    } else {
+    if (authorityData.secret !== process.env.CM_SECRET) {
       console.log(`${logTimestamp} Authority ${clc.red('Denied')}`)
       socket.disconnect()
       return
     }
-    socket.join(authorityData.lobbyID)
-    console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Server Joined ${clc.magenta(`${authorityData.lobbyID}`)}`)
-    socket.to(authorityData.lobbyID).emit('authority', authorityData)
+    console.log(`${logTimestamp} Authority ${clc.green('Confirmed')}`)
+    socket.join(authorityData.lobbyID + '/A')
+    console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Server Joined ${clc.magenta(`${authorityData.lobbyID + '/A'}`)}`)
+    socket.to(authorityData.lobbyID + '/A').emit('authority', authorityData)
   })
 
   socket.on('disconnect', () => {
-    console.log(`${logTimestamp} Server Socket ${clc.red(`Disconnected`)} ${clc.magenta(socket.id)}`)
+    console.log(`${logTimestamp} Client Socket ${clc.red(`Disconnected`)} ${clc.magenta(socket.id)}`)
   })
 })

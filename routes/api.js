@@ -192,16 +192,27 @@ router.post('/login', express.json(), (req, res) => {
                     console.error(err.message)
                   })
                   conn
-                    .query('SELECT guid FROM sessions, players WHERE username = ?', [req.body.username])
+                    .query('SELECT guid FROM sessions, players WHERE sessions.usernameGUID = players.guid AND username = ?', [req.body.username])
                     .then((response) => {
                       if (response.length > 0) {
                         conn.query('UPDATE sessions SET ip = ? FROM players WHERE username = ?', [getIP(req), req.body.username]).catch((err) => {
                           console.error(err.message)
                         })
                       } else {
-                        conn.query('INSERT INTO sessions VALUES (?, ?, ?)', [crypto.randomUUID(), response[0].guid, getIP(req)]).catch((err) => {
-                          console.error(err.message)
-                        })
+                        conn
+                          .query('SELECT guid FROM players WHERE username = ?', [req.body.username])
+                          .then((guid) => {
+                            conn.query('INSERT INTO sessions VALUES (?, ?, ?)', [crypto.randomUUID(), guid[0].guid, getIP(req)]).catch((err) => {
+                              console.error(err.message)
+                              res.sendStatus(500)
+                              conn.end()
+                            })
+                          })
+                          .catch((err) => {
+                            console.error(err.message)
+                            res.sendStatus(500)
+                            conn.end()
+                          })
                       }
                     })
                     .catch((err) => {

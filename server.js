@@ -61,8 +61,7 @@ server.listen(port, () => {
       conn
         .query('DELETE FROM lobbies')
         .then((res) => {
-          console.log(res)
-          console.log(`${logTimestamp} Database Cleared`)
+          console.log(`${logTimestamp} Lobbies Table Cleared`)
           conn.end()
         })
         .catch((err) => {
@@ -84,11 +83,11 @@ io.on('connection', (socket) => {
 
   socket.on('authority', (authorityData) => {
     if (authorityData.secret !== process.env.CM_SECRET) {
-      console.log(`${logTimestamp} Authority ${clc.red('Denied')}`)
+      console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Authority ${clc.red('Denied')} for ${clc.magenta(`${authorityData.lobbyID}`)} Invalid Secret`)
       socket.disconnect()
       return
     }
-    console.log(`${logTimestamp} Authority ${clc.green('Confirmed')}`)
+    console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Authority ${clc.green('Confirmed')} for ${clc.magenta(`${authorityData.lobbyID}`)}`)
     socket.join('server')
     console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Server Joined ${clc.magenta('server')}`)
     socket.join(authorityData.lobbyID + '/A')

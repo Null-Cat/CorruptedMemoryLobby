@@ -63,7 +63,6 @@ router.get('/create', authenticateJWT, async (req, res) => {
               return conn.query('INSERT INTO lobbies value (?, ?, ?, ?, NOW())', [lobbyID, createdServerPort, 'lobby', null])
             })
             .then((response) => {
-              console.log(response)
               console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
               res.send({ lobbyID: lobbyID, port: createdServerPort })
               conn.end()

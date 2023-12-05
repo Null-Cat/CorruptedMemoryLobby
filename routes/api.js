@@ -168,7 +168,27 @@ router.get('/lobbies/port/:port', (req, res) => {
 router.delete('/lobbies/:lobbyid', (req, res) => {
   io.to(req.params.lobbyid + '/A').emit('command', 'stop')
   console.log(`${logTimestamp} Stopping Server ${req.params.lobbyid}`)
-  res.sendStatus(200)
+  mariadbPool.pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('DELETE FROM lobbies WHERE id = ?', [req.params.lobbyid])
+        .then((rows) => {
+          console.log(`${logTimestamp} Lobby ${req.params.lobbyid} Deleted`)
+          res.sendStatus(200)
+          conn.end()
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          res.sendStatus(500)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      res.sendStatus(500)
+    })
 })
 
 router.post('/login', express.json(), (req, res) => {

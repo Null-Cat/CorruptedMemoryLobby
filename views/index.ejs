@@ -14,7 +14,7 @@
 
         <div id="lobbyCards" class="d-flex justify-content-center flex-wrap" style="gap: 10px;">
             <% lobbies.sort((a,b)=>b.createdAt-a.createdAt).forEach(lobby=> { %>
-                <div class="card bg-dark text-white">
+                <div id="<%= lobby.id %>" class="card bg-dark text-white">
                     <div class="card-body">
                         <div class="d-flex justify-content-center">
                             <a href="" class="card-title display-4"
@@ -26,8 +26,9 @@
                             <%= lobby.createdAt.toLocaleString() %>
                         </p>
 
-                        <p id="<%= lobby.id %>" class="card-text display-6 text-center" style="font-family: system-ui;">
-                            Test</p>
+                        <p id="<%= lobby.id %>Text" class="card-text display-6 text-center"
+                            style="font-family: system-ui;">
+                            Running</p>
 
                         <button id="<%= lobby.id %>Button" onclick="stopServer('<%= lobby.id %>');"
                             class="btn btn-danger w-100">Kill</button>
@@ -47,6 +48,8 @@
             xhr.onload = () => {
                 if (xhr.readyState == 4 && xhr.status == 200) {
                     console.log(xhr.responseText);
+                    document.getElementById(id + 'Text').innerHTML = 'Stopped';
+                    document.getElementById(id + 'Button').innerHTML = '<i class="bi bi-check2"></i>';
                 } else {
                     console.log(`Error: ${xhr.status}`);
                 }

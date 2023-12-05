@@ -192,7 +192,7 @@ router.post('/login', express.json(), (req, res) => {
                     console.error(err.message)
                   })
                   conn
-                    .query('SELECT guid FROM sessions, players WHERE sessions.usernameGUID = players.guid AND username = ?', [req.body.username])
+                    .query('SELECT guid FROM sessions, players WHERE sessions.playerGUID = players.guid AND username = ?', [req.body.username])
                     .then((response) => {
                       if (response.length > 0) {
                         conn.query('UPDATE sessions SET ip = ? FROM players WHERE username = ?', [getIP(req), req.body.username]).catch((err) => {
@@ -252,7 +252,7 @@ router.post('/logout', express.json(), authenticateJWT, (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('DELETE sessions FROM sessions INNER JOIN players WHERE sessions.usernameGUID = players.guid AND username = ?', [req.user.username])
+        .query('DELETE sessions FROM sessions INNER JOIN players WHERE sessions.playerGUID = players.guid AND username = ?', [req.user.username])
         .then((rows) => {
           console.log(`${logTimestamp} ${clc.red('Logout')} ${clc.bold(req.user.username)}`)
           res.sendStatus(200)
@@ -283,7 +283,7 @@ router.post('/register', express.json(), (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT 1 FROM players WHERE username = ?', [req.body.username])
+        .query('SELECT 1 FROM sessions, players WHERE sessions.playerGUID = players.guid AND username = ?', [req.body.username])
         .then((rows) => {
           if (rows.length > 0) {
             console.log(`${clc.red(`${logTimestamp} Username ${clc.bold(req.body.username)} Already Exists`)}`)

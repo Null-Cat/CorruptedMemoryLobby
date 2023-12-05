@@ -36,7 +36,7 @@ function authenticateJWT(req, res, next) {
         .getConnection()
         .then((conn) => {
           conn
-            .query('SELECT 1 FROM sessions WHERE username = ?', [user.username])
+            .query('SELECT 1 FROM sessions, players WHERE sessions.playerGUID = players.guid AND username = ?', [user.username])
             .then((rows) => {
               if (rows.length == 0) {
                 console.log(`${logTimestamp} ${clc.bold(user.username)} Session ${clc.red('Expired')}`)

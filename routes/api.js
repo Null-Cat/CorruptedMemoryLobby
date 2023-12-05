@@ -6,7 +6,7 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const mariadbPool = require('../utilities/mariadbPool')
-const { logTimestamp, getIP, authenticateJWT, hasPerms } = require('../utilities/utilities')
+const { logTimestamp, getIP, authenticateJWT, hasPerms, io } = require('../utilities/utilities')
 
 const router = express.Router()
 
@@ -60,7 +60,7 @@ router.get('/create', authenticateJWT, async (req, res) => {
               console.log(`${logTimestamp} Server Created`)
             })
             .then(() => {
-              return conn.query('INSERT INTO lobbies value (?, ?, ?)', [lobbyID, createdServerPort, null])
+              return conn.query('INSERT INTO lobbies value (?, ?, ?, ?, NOW())', [lobbyID, createdServerPort, 'lobby', null])
             })
             .then((response) => {
               console.log(response)
@@ -163,6 +163,12 @@ router.get('/lobbies/port/:port', (req, res) => {
       console.log(err)
       res.sendStatus(500)
     })
+})
+
+router.delete('/lobbies/:lobbyid', (req, res) => {
+  io.to(req.params.lobbyid + '/A').emit('command', 'stop')
+  console.log(`${logTimestamp} Stopping Server ${req.params.lobbyid}`)
+  res.sendStatus(200)
 })
 
 router.post('/login', express.json(), (req, res) => {

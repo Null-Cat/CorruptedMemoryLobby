@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/_headerMeta.ejs') %>
+        <title>Lobbies</title>
+</head>
+
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-center">
+            <h1 class="display-4" style="padding: 25px; font-family: system-ui;">Lobbies</h1>
+        </div>
+
+        <div id="sessionCards" class="d-flex justify-content-center flex-wrap" style="gap: 10px;">
+            <% lobbies.sort((a,b)=>b.createdAt-a.createdAt).forEach(lobby=> { %>
+                <div class="card bg-dark text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-center">
+                            <a href="" class="card-title display-4"
+                                style="font-family: system-ui; text-decoration: none;">
+                                <%= lobby.id %>
+                            </a>
+                        </div>
+                        <p class="card-text text-center">
+                            <%= lobby.createdAt.toLocaleString() %>
+                        </p>
+
+                        <p id="<%= lobby.id %>" class="card-text display-6 text-center" style="font-family: system-ui;">
+                            Test</p>
+
+                        <button id="<%= lobby.id %>Button" onclick="stopServer('<%= lobby.id %>');"
+                            class="btn btn-danger w-100">Kill</button>
+                    </div>
+                </div>
+                <% }) %>
+        </div>
+    </div>
+
+    <script>
+        function stopServer(id) {
+            document.getElementById('<%= lobby.id %>Button').setAttribute("disabled");
+            document.getElementById('<%= lobby.id %>Button').innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>';
+            const xhr = new XMLHttpRequest();
+            xhr.open("DELETE", "/api/lobbies" + id);
+            xhr.send();
+            xhr.onload = () => {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    console.log(xhr.responseText);
+                } else {
+                    console.log(`Error: ${xhr.status}`);
+                }
+            };
+        }
+    </script>
+
+    <%- include('./partials/_bootstrapJS.ejs') %>
+</body>
+
+</html>

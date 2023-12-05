@@ -2,6 +2,10 @@ const jwt = require('jsonwebtoken')
 const jwtSecret = process.env.JWT_SECRET
 const clc = require('cli-color')
 const mariadbPool = require('./mariadbPool')
+const express = require('express')
+const app = express()
+const server = require('http').createServer(app)
+const io = require('socket.io')(server, { cors: { origin: '*' } })
 
 var date = new Date(),
   logTimestamp =
@@ -107,4 +111,4 @@ async function hasPerms(requiredPerms, user) {
       })
   }))
 }
-module.exports = { logTimestamp, getIP, authenticateJWT, hasPerms }
+module.exports = { logTimestamp, getIP, authenticateJWT, hasPerms, app, server, io }

@@ -1,12 +1,9 @@
 require('dotenv').config()
 const express = require('express')
-const app = express()
-const server = require('http').createServer(app)
-const io = require('socket.io')(server, { cors: { origin: '*' } })
 const clc = require('cli-color')
 const jwt = require('jsonwebtoken')
 const mariadbPool = require('./utilities/mariadbPool')
-const { logTimestamp, authenticateJWT } = require('./utilities/utilities')
+const { logTimestamp, authenticateJWT, app, server, io } = require('./utilities/utilities')
 
 const port = process.env.PORT || 4000
 
@@ -20,7 +17,28 @@ app.use(LogConnections)
 app.use(express.static('public'))
 app.use('/api', require('./routes/api'))
 
-app.get('/', (req, res) => {})
+app.get('/', (req, res) => {
+  mariadbPool.pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('SELECT * FROM lobbies')
+        .then((rows) => {
+          res.render('index.ejs', { lobbies: rows })
+          conn.end()
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          res.sendStatus(500)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      res.sendStatus(500)
+    })
+})
 
 app.all('*', (req, res) => {
   res.sendStatus(404)
@@ -71,9 +89,23 @@ io.on('connection', (socket) => {
       return
     }
     console.log(`${logTimestamp} Authority ${clc.green('Confirmed')}`)
+    socket.join('server')
+    console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Server Joined ${clc.magenta('server')}`)
     socket.join(authorityData.lobbyID + '/A')
     console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Server Joined ${clc.magenta(`${authorityData.lobbyID + '/A'}`)}`)
     socket.to(authorityData.lobbyID + '/A').emit('authority', authorityData)
+  })
+
+  socket.on('command', (commandData) => {
+    // if (commandData.lobbyID !== socket.data.lobbyID) {
+    //   console.log(`${logTimestamp} Command ${clc.red('Denied')} ${clc.magenta(`${socket.id}`)} No Authority in ${clc.magenta(`${commandData.lobbyID}`)}`)
+    //   return
+    // }
+    // console.log(`${logTimestamp} Authority ${clc.green('Confirmed')} ${clc.magenta(`${socket.id}`)} ${clc.magenta(`${commandData.lobbyID}`)}`)
+    if (commandData.command === 'stop') {
+      socket.to(commandData.lobbyID + '/A').emit('command', 'stop')
+      console.log(`${logTimestamp} Command ${clc.yellow('Stop')} ${clc.green('Sent')} to Server ${clc.magenta(`${commandData.lobbyID}`)}`)
+    }
   })
 
   socket.on('disconnect', () => {

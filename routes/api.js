@@ -195,7 +195,7 @@ router.post('/login', express.json(), (req, res) => {
                     .query('SELECT guid FROM sessions, players WHERE sessions.playerGUID = players.guid AND username = ?', [req.body.username])
                     .then((response) => {
                       if (response.length > 0) {
-                        conn.query('UPDATE sessions SET ip = ? FROM players WHERE username = ?', [getIP(req), req.body.username]).catch((err) => {
+                        conn.query('UPDATE sessions, players SET sessions.ip = ? WHERE sessions.playerGUID = players.guid AND username = ?', [getIP(req), req.body.username]).catch((err) => {
                           console.error(err.message)
                         })
                       } else {

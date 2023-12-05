@@ -12,7 +12,7 @@
             <h1 class="display-4" style="padding: 25px; font-family: system-ui;">Lobbies</h1>
         </div>
 
-        <div id="sessionCards" class="d-flex justify-content-center flex-wrap" style="gap: 10px;">
+        <div id="lobbyCards" class="d-flex justify-content-center flex-wrap" style="gap: 10px;">
             <% lobbies.sort((a,b)=>b.createdAt-a.createdAt).forEach(lobby=> { %>
                 <div class="card bg-dark text-white">
                     <div class="card-body">
@@ -39,10 +39,10 @@
 
     <script>
         function stopServer(id) {
-            document.getElementById('<%= lobby.id %>Button').setAttribute("disabled");
-            document.getElementById('<%= lobby.id %>Button').innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>';
+            document.getElementById(id + 'Button').setAttribute("disabled", "disabled");
+            document.getElementById(id + 'Button').innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>';
             const xhr = new XMLHttpRequest();
-            xhr.open("DELETE", "/api/lobbies" + id);
+            xhr.open("DELETE", "/api/lobbies/" + id);
             xhr.send();
             xhr.onload = () => {
                 if (xhr.readyState == 4 && xhr.status == 200) {

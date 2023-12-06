@@ -120,7 +120,7 @@ router.post('/join', authenticateJWT, express.json(), async (req, res) => {
                 return
               }
               conn
-                .query('UPDATE players SET lobbyid = ? WHERE username = ?', [req.body.lobbyID, req.user.username])
+                .query('UPDATE players SET lobbyid = ?, joinedLobbyAt = NOW() WHERE username = ?', [req.body.lobbyID, req.user.username])
                 .then((response) => {
                   console.log(`${logTimestamp} ${clc.bold(req.user.username)} Joined ${clc.bold(req.body.lobbyID)}`)
                   io.emit('join', { username: req.user.username, lobbyID: req.body.lobbyID })
@@ -168,7 +168,7 @@ router.post('/leave', authenticateJWT, express.json(), async (req, res) => {
             return
           }
           conn
-            .query('UPDATE players SET lobbyid = NULL WHERE username = ?', [req.user.username])
+            .query('UPDATE players SET lobbyid = NULL, joinedLobbyAt = NULL WHERE username = ?', [req.user.username])
             .then((response) => {
               console.log(`${logTimestamp} ${clc.bold(req.user.username)} Left Lobby`)
               io.emit('leave', { username: req.user.username, lobbyID: req.body.lobbyID })
@@ -223,7 +223,7 @@ router.get('/lobbies/id/:id', (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT port FROM lobbies WHERE id = ?', [req.params.id])
+        .query('SELECT * FROM lobbies WHERE id = ?', [req.params.id])
         .then((rows) => {
           if (rows.length === 0) {
             res.sendStatus(404)
@@ -245,12 +245,15 @@ router.get('/lobbies/id/:id', (req, res) => {
     })
 })
 
-router.get('/lobbies/port/:port', (req, res) => {
+router.get('/lobby/players/:id', (req, res) => {
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT id FROM lobbies WHERE port = ?', [req.params.port])
+        .query(
+          'SELECT username user, (SELECT CASE WHEN EXISTS (SELECT 1 FROM players, lobbies WHERE players.guid = lobbies.owner AND username = user) THEN TRUE ELSE FALSE END) AS "isOwner" FROM players WHERE lobbyid = ? ORDER BY joinedLobbyAt DESC',
+          [req.params.id]
+        )
         .then((rows) => {
           if (rows.length === 0) {
             res.sendStatus(404)
@@ -430,7 +433,7 @@ router.post('/register', express.json(), (req, res) => {
               })
               .then((hash) => {
                 conn
-                  .query('INSERT INTO players VALUES (?, ?, ?, ?, ?, NOW(), NOW())', [crypto.randomUUID(), req.body.username, hash, defaultPerms, null])
+                  .query('INSERT INTO players VALUES (?, ?, ?, ?, NULL, NOW(), NOW(), NULL)', [crypto.randomUUID(), req.body.username, hash, defaultPerms])
                   .then((response) => {
                     console.log(`${logTimestamp} Registration ${clc.bold(req.body.username)}`)
                     res.sendStatus(201)

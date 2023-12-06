@@ -15,6 +15,7 @@ router.get('/', (req, res) => {
 })
 
 router.post('/create', authenticateJWT, express.json(), async (req, res) => {
+  req.body.maxPlayers = clamp(parseInt(req.body.maxPlayers), 2, 4)
   if (!(await hasPerms(['CREATE_LOBBY'], req.user))) {
     res.sendStatus(403)
     return
@@ -498,5 +499,7 @@ function makeID(length) {
   }
   return result
 }
+
+const clamp = (num, min, max) => Math.min(Math.max(num, min), max)
 
 module.exports = router

@@ -62,7 +62,7 @@ server.listen(port, () => {
         .query('DELETE FROM lobbies')
         .then((res) => {
           conn
-            .query('UPDATE player SET lobbyID = NULL WHERE lobbyID IS NOT NULL')
+            .query('UPDATE players SET lobbyID = NULL WHERE lobbyID IS NOT NULL')
             .then((res) => {
               console.log(`${logTimestamp} Lobbies Table Cleared`)
               conn.end()

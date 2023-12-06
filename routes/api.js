@@ -14,18 +14,19 @@ router.get('/', (req, res) => {
   res.send('API Running')
 })
 
-router.get('/create', authenticateJWT, async (req, res) => {
+router.post('/create', authenticateJWT, express.json(), async (req, res) => {
   if (!(await hasPerms(['CREATE_LOBBY'], req.user))) {
     res.sendStatus(403)
     return
   }
   let lobbyID = makeID(5)
   let createdServerPort
+  let ownerGUID
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT 1 FROM players WHERE lobbyid IS NOT NULL AND username = ?', [req.user.username])
+        .query('SELECT guid FROM players WHERE lobbyid IS NOT NULL AND username = ?', [req.user.username])
         .then((lobbyIDForUserRows) => {
           if (lobbyIDForUserRows.length > 0) {
             console.log(`${logTimestamp} ${clc.bold(req.user.username)} ${clc.red('Already in a Lobby')}`)
@@ -33,6 +34,7 @@ router.get('/create', authenticateJWT, async (req, res) => {
             conn.end()
             return
           }
+          ownerGUID = lobbyIDForUserRows[0].guid
           conn
             .query('SELECT id, port FROM lobbies ORDER BY port DESC')
             .then((rows) => {
@@ -53,18 +55,123 @@ router.get('/create', authenticateJWT, async (req, res) => {
                 createdServerPort = rows[0].port + 1
               }
 
-              console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID}`)
-              shell.exec(`/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort} -lobbyID=${lobbyID} -CMServerSecret=${process.env.CM_SECRET}`, {
-                async: true
-              })
-              console.log(`${logTimestamp} Server Created`)
+              console.log(`${logTimestamp} Creating Server on Port ${createdServerPort} with ID ${lobbyID} with ${req.body.maxPlayers} Max Players`)
+              shell.exec(
+                `/home/phro/Server/LinuxArm64Server/CorruptedMemoryServer-Arm64.sh -log -port=${createdServerPort} -lobbyID=${lobbyID} -CMServerSecret=${process.env.CM_SECRET} -maxPlayers=${req.body.maxPlayers}`,
+                {
+                  async: true
+                }
+              )
+              io.to('client').emit('create', { lobbyID: lobbyID, port: createdServerPort })
             })
             .then(() => {
-              return conn.query('INSERT INTO lobbies value (?, ?, ?, ?, NOW())', [lobbyID, createdServerPort, 'lobby', null])
+              return conn.query('INSERT INTO lobbies value (?, ?, ?, ?, ?, NOW())', [lobbyID, createdServerPort, 'lobby', ownerGUID, req.body.maxPlayers])
             })
             .then((response) => {
               console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
               res.send({ lobbyID: lobbyID, port: createdServerPort })
+              conn.end()
+            })
+            .catch((err) => {
+              //handle error
+              console.log(err)
+              res.sendStatus(500)
+              conn.end()
+            })
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          res.sendStatus(500)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      res.sendStatus(500)
+    })
+})
+
+router.post('/join', authenticateJWT, express.json(), async (req, res) => {
+  if (!(await hasPerms(['JOIN_LOBBY'], req.user))) {
+    res.sendStatus(403)
+    return
+  }
+  mariadbPool.pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('SELECT id FROM lobbies WHERE id = ?', [req.body.lobbyID])
+        .then((rows) => {
+          if (rows.length === 0) {
+            console.log(`${logTimestamp} ${clc.bold(req.user.username)} ${clc.red('Invalid Lobby ID')}`)
+            res.sendStatus(404)
+            conn.end()
+            return
+          }
+          conn
+            .query('SELECT 1 FROM players WHERE lobbyid IS NOT NULL AND username = ?', [req.user.username])
+            .then((lobbyIDForUserRows) => {
+              if (lobbyIDForUserRows.length > 0) {
+                console.log(`${logTimestamp} ${clc.bold(req.user.username)} ${clc.red('Already in a Lobby')}`)
+                res.sendStatus(409)
+                conn.end()
+                return
+              }
+              conn
+                .query('UPDATE players SET lobbyid = ? WHERE username = ?', [req.body.lobbyID, req.user.username])
+                .then((response) => {
+                  console.log(`${logTimestamp} ${clc.bold(req.user.username)} Joined ${clc.bold(req.body.lobbyID)}`)
+                  io.emit('join', { username: req.user.username, lobbyID: req.body.lobbyID })
+                  res.sendStatus(200)
+                  conn.end()
+                })
+                .catch((err) => {
+                  //handle error
+                  console.log(err)
+                  res.sendStatus(500)
+                  conn.end()
+                })
+            })
+            .catch((err) => {
+              //handle error
+              console.log(err)
+              res.sendStatus(500)
+              conn.end()
+            })
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          res.sendStatus(500)
+          conn.end()
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      res.sendStatus(500)
+    })
+})
+
+router.post('/leave', authenticateJWT, express.json(), async (req, res) => {
+  mariadbPool.pool
+    .getConnection()
+    .then((conn) => {
+      conn
+        .query('SELECT 1 FROM players WHERE lobbyid IS NULL AND username = ?', [req.user.username])
+        .then((lobbyIDForUserRows) => {
+          if (lobbyIDForUserRows.length > 0) {
+            console.log(`${logTimestamp} ${clc.bold(req.user.username)} ${clc.red('Not in a Lobby')}`)
+            res.sendStatus(409)
+            conn.end()
+            return
+          }
+          conn
+            .query('UPDATE players SET lobbyid = NULL WHERE username = ?', [req.user.username])
+            .then((response) => {
+              console.log(`${logTimestamp} ${clc.bold(req.user.username)} Left Lobby`)
+              io.emit('leave', { username: req.user.username, lobbyID: req.body.lobbyID })
+              res.sendStatus(200)
               conn.end()
             })
             .catch((err) => {
@@ -92,7 +199,7 @@ router.get('/lobbies', (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT * FROM lobbies')
+        .query('SELECT *, (SELECT COUNT(*) FROM players, lobbies WHERE players.lobbyid = lobbies.id) AS "online" FROM lobbies')
         .then((rows) => {
           res.send(rows)
           conn.end()

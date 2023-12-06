@@ -61,8 +61,16 @@ server.listen(port, () => {
       conn
         .query('DELETE FROM lobbies')
         .then((res) => {
-          console.log(`${logTimestamp} Lobbies Table Cleared`)
-          conn.end()
+          conn
+            .query('UPDATE player SET lobbyID = NULL WHERE lobbyID IS NOT NULL')
+            .then((res) => {
+              console.log(`${logTimestamp} Lobbies Table Cleared`)
+              conn.end()
+            })
+            .catch((err) => {
+              console.log(err)
+              conn.end()
+            })
         })
         .catch((err) => {
           //handle error
@@ -82,6 +90,11 @@ io.on('connection', (socket) => {
   //const referer = new URL(socket.request.headers.referer)
 
   socket.on('authority', (authorityData) => {
+    if (authorityData.authority === 'client') {
+      console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Client Joined Room ${clc.magenta('client')}`)
+      socket.join('client')
+      return
+    }
     if (authorityData.secret !== process.env.CM_SECRET) {
       console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Authority ${clc.red('Denied')} for ${clc.magenta(`${authorityData.lobbyID}`)} Invalid Secret`)
       socket.disconnect()
@@ -89,10 +102,9 @@ io.on('connection', (socket) => {
     }
     console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Authority ${clc.green('Confirmed')} for ${clc.magenta(`${authorityData.lobbyID}`)}`)
     socket.join('server')
-    console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Server Joined ${clc.magenta('server')}`)
+    console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Server Joined Room ${clc.magenta('server')}`)
     socket.join(authorityData.lobbyID + '/A')
-    console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Server Joined ${clc.magenta(`${authorityData.lobbyID + '/A'}`)}`)
-    socket.to(authorityData.lobbyID + '/A').emit('authority', authorityData)
+    console.log(`${logTimestamp} ${clc.magenta(`${socket.id}`)} Server Joined Room ${clc.magenta(`${authorityData.lobbyID + '/A'}`)}`)
   })
 
   socket.on('command', (commandData) => {
@@ -105,6 +117,18 @@ io.on('connection', (socket) => {
       socket.to(commandData.lobbyID + '/A').emit('command', 'stop')
       console.log(`${logTimestamp} Command ${clc.yellow('Stop')} ${clc.green('Sent')} to Server ${clc.magenta(`${commandData.lobbyID}`)}`)
     }
+  })
+
+  socket.on('join', (joinData) => {
+    socket.to(joinData.lobbyID).emit('join', joinData)
+    console.log(`${logTimestamp} Player ${clc.magenta(`${joinData.username}`)} Joined Lobby ${clc.magenta(`${joinData.lobbyID}`)}`)
+    socket.join(joinData.lobbyID)
+  })
+
+  socket.on('leave', (leaveData) => {
+    socket.leave(leaveData.lobbyID)
+    console.log(`${logTimestamp} Player ${clc.magenta(`${leaveData.username}`)} Left Lobby ${clc.magenta(`${leaveData.lobbyID}`)}`)
+    socket.to(leaveData.lobbyID).emit('leave', leaveData)
   })
 
   socket.on('disconnect', () => {

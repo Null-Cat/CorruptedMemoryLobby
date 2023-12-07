@@ -98,17 +98,20 @@ router.post('/join', authenticateJWT, express.json(), async (req, res) => {
     res.sendStatus(403)
     return
   }
+  let serverPort
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT id FROM lobbies WHERE id = ?', [req.body.lobbyID])
+        .query('SELECT port FROM lobbies WHERE id = ?', [req.body.lobbyID])
         .then((rows) => {
           if (rows.length === 0) {
             console.log(`${logTimestamp} ${clc.bold(req.user.username)} ${clc.red('Invalid Lobby ID')}`)
             res.sendStatus(404)
             conn.end()
             return
+          } else {
+            serverPort = rows[0].port
           }
           conn
             .query('SELECT 1 FROM players WHERE lobbyid IS NOT NULL AND username = ?', [req.user.username])
@@ -124,7 +127,7 @@ router.post('/join', authenticateJWT, express.json(), async (req, res) => {
                 .then((response) => {
                   console.log(`${logTimestamp} ${clc.bold(req.user.username)} Joined ${clc.bold(req.body.lobbyID)}`)
                   io.emit('join', { username: req.user.username, lobbyID: req.body.lobbyID })
-                  res.sendStatus(200)
+                  res.send({ lobbyID: req.body.lobbyID, port: serverPort })
                   conn.end()
                 })
                 .catch((err) => {
@@ -296,6 +299,7 @@ router.delete('/lobbies/:lobbyid', (req, res) => {
             .query('DELETE FROM lobbies WHERE id = ?', [req.params.lobbyid])
             .then((rows) => {
               console.log(`${logTimestamp} Lobby ${req.params.lobbyid} Deleted`)
+              io.to(req.params.lobbyid).emit('close', { message: 'Server Closed' })
               res.sendStatus(200)
               conn.end()
             })

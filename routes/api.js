@@ -29,7 +29,7 @@ router.post('/create', authenticateJWT, express.json(), async (req, res) => {
       conn
         .query('SELECT guid FROM players WHERE lobbyid IS NULL AND username = ?', [req.user.username])
         .then((lobbyIDForUserRows) => {
-          if (lobbyIDForUserRows.length > 0) {
+          if (lobbyIDForUserRows.length === 0) {
             console.log(`${logTimestamp} ${clc.bold(req.user.username)} ${clc.red('Already in a Lobby')}`)
             res.sendStatus(409)
             conn.end()

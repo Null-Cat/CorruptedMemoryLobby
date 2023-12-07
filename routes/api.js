@@ -258,6 +258,13 @@ router.get('/lobby/players/:id', authenticateJWT, (req, res) => {
           if (rows.length === 0) {
             res.sendStatus(404)
           } else {
+            for (let i = 0; i < rows.length; i++) {
+              if (rows[i].isOwner == 1) {
+                rows[i].isOwner = true
+              } else {
+                rows[i].isOwner = false
+              }
+            }
             console.log(rows)
             res.send(rows)
           }

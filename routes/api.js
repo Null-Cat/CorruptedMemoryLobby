@@ -245,7 +245,7 @@ router.get('/lobbies/id/:id', (req, res) => {
     })
 })
 
-router.get('/lobby/players/:id', (req, res) => {
+router.get('/lobby/players/:id', authenticateJWT, (req, res) => {
   mariadbPool.pool
     .getConnection()
     .then((conn) => {

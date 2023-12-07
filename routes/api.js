@@ -282,11 +282,18 @@ router.delete('/lobbies/:lobbyid', (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('DELETE FROM lobbies WHERE id = ?', [req.params.lobbyid])
+        .query('UPDATE players SET lobbyID = NULL, joinedLobbyAt = NULL WHERE lobbyID = ?', [req.params.lobbyid])
         .then((rows) => {
-          console.log(`${logTimestamp} Lobby ${req.params.lobbyid} Deleted`)
-          res.sendStatus(200)
-          conn.end()
+          conn
+            .query('DELETE FROM lobbies WHERE id = ?', [req.params.lobbyid])
+            .then((rows) => {
+              console.log(`${logTimestamp} Lobby ${req.params.lobbyid} Deleted`)
+              res.sendStatus(200)
+              conn.end()
+            })
+            .catch((err) => {
+              console.log(err)
+            })
         })
         .catch((err) => {
           //handle error

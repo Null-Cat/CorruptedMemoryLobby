@@ -258,6 +258,7 @@ router.get('/lobby/players/:id', authenticateJWT, (req, res) => {
           if (rows.length === 0) {
             res.sendStatus(404)
           } else {
+            console.log(rows)
             res.send(rows)
           }
           conn.end()

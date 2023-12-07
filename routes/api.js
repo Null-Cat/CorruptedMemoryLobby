@@ -171,12 +171,48 @@ router.post('/leave', authenticateJWT, express.json(), async (req, res) => {
             return
           }
           conn
-            .query('UPDATE players SET lobbyid = NULL, joinedLobbyAt = NULL WHERE username = ?', [req.user.username])
-            .then((response) => {
-              console.log(`${logTimestamp} ${clc.bold(req.user.username)} Left Lobby`)
-              io.emit('leave', { username: req.user.username, lobbyID: req.body.lobbyID })
-              res.sendStatus(200)
-              conn.end()
+            .query('SELECT 1 FROM players, lobbies WHERE players.guid = lobbies.owner AND lobbyid = ? AND username = ?', [req.body.lobbyID, req.user.username])
+            .then((isOwner) => {
+              if (isOwner.length > 0) {
+                io.to(req.body.lobbyID + '/A').emit('command', 'stop')
+                console.log(`${logTimestamp} Stopping Server ${clc.magenta(req.body.lobbyID)} As Owner Left`)
+                conn
+                  .query('UPDATE players SET lobbyID = NULL, joinedLobbyAt = NULL WHERE lobbyID = ?', [req.body.lobbyID])
+                  .then((rows) => {
+                    conn
+                      .query('DELETE FROM lobbies WHERE id = ?', [req.body.lobbyID])
+                      .then((rows) => {
+                        console.log(`${logTimestamp} Lobby ${clc.magenta(req.body.lobbyID)} Deleted`)
+                        io.to(req.body.lobbyID).emit('close', { message: 'Server Closed' })
+                        io.socketsLeave(req.body.lobbyID)
+                        console.log(`${logTimestamp} Lobby ${clc.magenta(req.body.lobbyID)} Socket Room Closed`)
+                      })
+                      .catch((err) => {
+                        console.log(err)
+                        conn.end()
+                      })
+                  })
+                  .catch((err) => {
+                    //handle error
+                    console.log(err)
+                    res.sendStatus(500)
+                    conn.end()
+                  })
+              }
+              conn
+                .query('UPDATE players SET lobbyid = NULL, joinedLobbyAt = NULL WHERE username = ?', [req.user.username])
+                .then((response) => {
+                  console.log(`${logTimestamp} ${clc.bold(req.user.username)} Left Lobby`)
+                  io.emit('leave', { username: req.user.username, lobbyID: req.body.lobbyID })
+                  res.sendStatus(200)
+                  conn.end()
+                })
+                .catch((err) => {
+                  //handle error
+                  console.log(err)
+                  res.sendStatus(500)
+                  conn.end()
+                })
             })
             .catch((err) => {
               //handle error
@@ -288,7 +324,7 @@ router.get('/lobby/players/:id', authenticateJWT, (req, res) => {
 
 router.delete('/lobbies/:lobbyid', (req, res) => {
   io.to(req.params.lobbyid + '/A').emit('command', 'stop')
-  console.log(`${logTimestamp} Stopping Server ${req.params.lobbyid}`)
+  console.log(`${logTimestamp} Stopping Server ${clc.magenta(req.params.lobbyid)}`)
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
@@ -298,8 +334,10 @@ router.delete('/lobbies/:lobbyid', (req, res) => {
           conn
             .query('DELETE FROM lobbies WHERE id = ?', [req.params.lobbyid])
             .then((rows) => {
-              console.log(`${logTimestamp} Lobby ${req.params.lobbyid} Deleted`)
+              console.log(`${logTimestamp} Lobby ${clc.magenta(req.params.lobbyid)} Deleted`)
               io.to(req.params.lobbyid).emit('close', { message: 'Server Closed' })
+              io.socketsLeave(req.params.lobbyid)
+              console.log(`${logTimestamp} Lobby ${clc.magenta(req.params.lobbyid)} Socket Room Closed`)
               res.sendStatus(200)
               conn.end()
             })

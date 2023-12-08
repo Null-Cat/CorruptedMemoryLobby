@@ -99,12 +99,19 @@ router.post('/join', authenticateJWT, express.json(), async (req, res) => {
     return
   }
   let serverPort
+  let playerCount
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT port FROM lobbies WHERE id = ?', [req.body.lobbyID])
+        .query('SELECT port, (SELECT COUNT(*) FROM players, lobbies WHERE players.lobbyid = lobbies.id) AS "online", maxPlayers FROM lobbies WHERE id = ?', [req.body.lobbyID])
         .then((rows) => {
+          if (rows[0].online >= rows[0].maxPlayers) {
+            console.log(`${logTimestamp} ${clc.bold(req.user.username)} ${clc.red('Lobby Full')}`)
+            res.sendStatus(409)
+            conn.end()
+            return
+          }
           if (rows.length === 0) {
             console.log(`${logTimestamp} ${clc.bold(req.user.username)} ${clc.red('Invalid Lobby ID')}`)
             res.sendStatus(404)

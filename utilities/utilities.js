@@ -111,4 +111,5 @@ async function hasPerms(requiredPerms, user) {
       })
   }))
 }
+
 module.exports = { logTimestamp, getIP, authenticateJWT, hasPerms, app, server, io }

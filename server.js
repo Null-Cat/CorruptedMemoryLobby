@@ -305,7 +305,7 @@ io.on('connection', (socket) => {
                     conn
                       .query('UPDATE players SET isReady = FALSE, lobbyid = NULL, joinedLobbyAt = NULL WHERE username = ?', [socket.data.username])
                       .then((response) => {
-                        console.log(`${logTimestamp} ${clc.bold(socket.data.username)} Left Lobby`)
+                        console.log(`${logTimestamp} ${clc.bold(socket.data.username)} Left Lobby ${clc.magenta(socket.data.lobbyID)}`)
                         io.emit('leave', { username: socket.data.username, lobbyID: socket.data.lobbyID })
                         conn.end()
                       })

@@ -276,12 +276,20 @@ router.get('/lobbies/id/:id', (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT * FROM lobbies WHERE id = ?', [req.params.id])
+        .query('SELECT id, status, (SELECT COUNT(*) FROM players, lobbies WHERE players.lobbyid = lobbies.id) AS "online", maxPlayers FROM lobbies WHERE id = ?', [req.params.id])
         .then((rows) => {
           if (rows.length === 0) {
             res.sendStatus(404)
           } else {
-            res.send(rows)
+            const serializedRow = {
+              id: rows[0].id.toString(),
+              status: rows[0].status,
+              online: parseInt(rows[0].online),
+              maxPlayers: parseInt(rows[0].maxPlayers)
+            }
+            console.log(serializedRow)
+            res.json(serializedRow)
+            conn.end()
           }
           conn.end()
         })
@@ -318,7 +326,6 @@ router.get('/lobby/players/:id', authenticateJWT, (req, res) => {
                 rows[i].isOwner = false
               }
             }
-            console.log(rows)
             res.send(rows)
           }
           conn.end()

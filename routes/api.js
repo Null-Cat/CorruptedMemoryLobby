@@ -66,7 +66,7 @@ router.post('/create', authenticateJWT, express.json(), async (req, res) => {
               io.to('client').emit('create', { lobbyID: lobbyID, port: createdServerPort })
             })
             .then(() => {
-              return conn.query('INSERT INTO lobbies value (?, ?, ?, ?, ?, NOW())', [lobbyID, createdServerPort, 'lobby', ownerGUID, req.body.maxPlayers])
+              return conn.query('INSERT INTO lobbies value (?, ?, ?, ?, ?, NOW())', [lobbyID, createdServerPort, 'In Lobby', ownerGUID, req.body.maxPlayers])
             })
             .then((response) => {
               console.log(`${logTimestamp} Database Entry Created for ${lobbyID}`)
@@ -234,12 +234,12 @@ router.post('/leave', authenticateJWT, express.json(), async (req, res) => {
     })
 })
 
-router.get('/lobbies', (req, res) => {
+router.get('/lobbies', authenticateJWT, (req, res) => {
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT *, (SELECT COUNT(*) FROM players, lobbies WHERE players.lobbyid = lobbies.id) AS "online" FROM lobbies')
+        .query('SELECT *, (SELECT COUNT(*) FROM players, lobbies WHERE players.lobbyid = lobbies.id) AS "online" FROM lobbies ORDER BY createdAt DESC')
         .then((rows) => {
           res.send(rows)
           conn.end()

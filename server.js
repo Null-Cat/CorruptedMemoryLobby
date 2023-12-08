@@ -229,6 +229,37 @@ io.on('connection', (socket) => {
     })
   })
 
+  socket.on('start', (startData) => {
+    mariadbPool.pool.getConnection().then((conn) => {
+      conn
+        .query('SELECT 1 FROM lobbies WHERE id = ?', [startData])
+        .then((rows) => {
+          if (rows.length === 0) {
+            console.log(`${logTimestamp} ${clc.red('Invalid')} Lobby ${clc.magenta(`${startData}`)}`)
+            conn.end()
+            return
+          }
+          conn
+            .query('UPDATE lobbies SET status = "In Game" WHERE id = ?', [startData])
+            .then((rows) => {
+              console.log(`${logTimestamp} Lobby ${clc.magenta(`${startData}`)} Game Started`)
+              socket.to(startData).emit('start', startData)
+              conn.end()
+            })
+            .catch((err) => {
+              //handle error
+              console.log(err)
+              conn.end()
+            })
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          conn.end()
+        })
+    })
+  })
+
   socket.on('disconnect', () => {
     console.log(`${logTimestamp} Client Socket ${clc.red(`Disconnected`)} ${clc.magenta(socket.id)}`)
     if (socket.data.lobbyID) {
@@ -250,7 +281,7 @@ io.on('connection', (socket) => {
                     io.to(socket.data.lobbyID + '/A').emit('command', 'stop')
                     console.log(`${logTimestamp} Stopping Server ${clc.magenta(socket.data.lobbyID)} As Owner Left`)
                     conn
-                      .query('UPDATE players SET lobbyID = NULL, joinedLobbyAt = NULL WHERE lobbyID = ?', [socket.data.lobbyID])
+                      .query('UPDATE players SET isReady = FALSE, lobbyID = NULL, joinedLobbyAt = NULL WHERE lobbyID = ?', [socket.data.lobbyID])
                       .then((rows) => {
                         conn
                           .query('DELETE FROM lobbies WHERE id = ?', [socket.data.lobbyID])
@@ -270,19 +301,20 @@ io.on('connection', (socket) => {
                         console.log(err)
                         conn.end()
                       })
+                  } else {
+                    conn
+                      .query('UPDATE players SET isReady = FALSE, lobbyid = NULL, joinedLobbyAt = NULL WHERE username = ?', [socket.data.username])
+                      .then((response) => {
+                        console.log(`${logTimestamp} ${clc.bold(socket.data.username)} Left Lobby`)
+                        io.emit('leave', { username: socket.data.username, lobbyID: socket.data.lobbyID })
+                        conn.end()
+                      })
+                      .catch((err) => {
+                        //handle error
+                        console.log(err)
+                        conn.end()
+                      })
                   }
-                  conn
-                    .query('UPDATE players SET lobbyid = NULL, joinedLobbyAt = NULL WHERE username = ?', [socket.data.username])
-                    .then((response) => {
-                      console.log(`${logTimestamp} ${clc.bold(socket.data.username)} Left Lobby`)
-                      io.emit('leave', { username: socket.data.username, lobbyID: socket.data.lobbyID })
-                      conn.end()
-                    })
-                    .catch((err) => {
-                      //handle error
-                      console.log(err)
-                      conn.end()
-                    })
                 })
                 .catch((err) => {
                   //handle error

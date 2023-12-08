@@ -59,7 +59,7 @@ server.listen(port, () => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('UPDATE players SET lobbyID = NULL, joinedLobbyAt = NULL WHERE lobbyID IS NOT NULL')
+        .query('UPDATE players SET isReady = FALSE, lobbyID = NULL, joinedLobbyAt = NULL WHERE lobbyID IS NOT NULL OR isReady = TRUE')
         .then((res) => {
           conn
             .query('DELETE FROM lobbies')
@@ -139,13 +139,94 @@ io.on('connection', (socket) => {
   })
 
   socket.on('ready', (readyData) => {
-    socket.to(readyData.lobbyID).emit('ready', readyData)
-    console.log(`${logTimestamp} Player ${clc.magenta(`${readyData.username}`)} Ready in Lobby ${clc.magenta(`${readyData.lobbyID}`)}`)
+    mariadbPool.pool.getConnection().then((conn) => {
+      conn
+        .query('SELECT 1 FROM players WHERE username = ?', [readyData.username])
+        .then((rows) => {
+          if (rows.length == 0) {
+            console.log(`${logTimestamp} ${clc.red('Invalid')} Username ${clc.magenta(`${readyData.username}`)}`)
+            conn.end()
+            return
+          }
+          conn
+            .query('SELECT 1 FROM players WHERE lobbyid = ? AND username = ?', [readyData.lobbyID, readyData.username])
+            .then((rows) => {
+              if (rows.length == 0) {
+                console.log(`${logTimestamp} ${clc.red('Invalid')} Lobby ${clc.magenta(`${readyData.lobbyID}`)} for ${clc.magenta(`${readyData.username}`)}`)
+                conn.end()
+                return
+              }
+              conn
+                .query('UPDATE players SET isReady = TRUE WHERE lobbyid = ? AND username = ?', [readyData.lobbyID, readyData.username])
+                .then((rows) => {
+                  console.log(`${logTimestamp} Player ${clc.magenta(`${readyData.username}`)} Ready in Lobby ${clc.magenta(`${readyData.lobbyID}`)}`)
+                  socket.to(readyData.lobbyID).emit('ready', readyData)
+                  console.log(`${logTimestamp} Player ${clc.magenta(`${readyData.username}`)} Ready in Lobby ${clc.magenta(`${readyData.lobbyID}`)}`)
+                  conn.end()
+                })
+                .catch((err) => {
+                  //handle error
+                  console.log(err)
+                  conn.end()
+                })
+            })
+            .catch((err) => {
+              //handle error
+              console.log(err)
+              conn.end()
+            })
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          conn.end()
+        })
+    })
   })
 
   socket.on('unready', (unreadyData) => {
-    socket.to(unreadyData.lobbyID).emit('unready', unreadyData)
-    console.log(`${logTimestamp} Player ${clc.magenta(`${unreadyData.username}`)} Not Ready in Lobby ${clc.magenta(`${unreadyData.lobbyID}`)}`)
+    mariadbPool.pool.getConnection().then((conn) => {
+      conn
+        .query('SELECT 1 FROM players WHERE username = ?', [unreadyData.username])
+        .then((rows) => {
+          if (rows.length == 0) {
+            console.log(`${logTimestamp} ${clc.red('Invalid')} Username ${clc.magenta(`${unreadyData.username}`)}`)
+            conn.end()
+            return
+          }
+          conn
+            .query('SELECT 1 FROM players WHERE lobbyid = ? AND username = ?', [unreadyData.lobbyID, unreadyData.username])
+            .then((rows) => {
+              if (rows.length == 0) {
+                console.log(`${logTimestamp} ${clc.red('Invalid')} Lobby ${clc.magenta(`${unreadyData.lobbyID}`)} for ${clc.magenta(`${unreadyData.username}`)}`)
+                conn.end()
+                return
+              }
+              conn
+                .query('UPDATE players SET isReady = FALSE WHERE lobbyid = ? AND username = ?', [unreadyData.lobbyID, unreadyData.username])
+                .then((rows) => {
+                  socket.to(unreadyData.lobbyID).emit('unready', unreadyData)
+                  console.log(`${logTimestamp} Player ${clc.magenta(`${unreadyData.username}`)} Not Ready in Lobby ${clc.magenta(`${unreadyData.lobbyID}`)}`)
+                  conn.end()
+                })
+                .catch((err) => {
+                  //handle error
+                  console.log(err)
+                  conn.end()
+                })
+            })
+            .catch((err) => {
+              //handle error
+              console.log(err)
+              conn.end()
+            })
+        })
+        .catch((err) => {
+          //handle error
+          console.log(err)
+          conn.end()
+        })
+    })
   })
 
   socket.on('disconnect', () => {

@@ -99,7 +99,6 @@ router.post('/join', authenticateJWT, express.json(), async (req, res) => {
     return
   }
   let serverPort
-  let playerCount
   mariadbPool.pool
     .getConnection()
     .then((conn) => {
@@ -184,7 +183,7 @@ router.post('/leave', authenticateJWT, express.json(), async (req, res) => {
                 io.to(req.body.lobbyID + '/A').emit('command', 'stop')
                 console.log(`${logTimestamp} Stopping Server ${clc.magenta(req.body.lobbyID)} As Owner Left`)
                 conn
-                  .query('UPDATE players SET lobbyID = NULL, joinedLobbyAt = NULL WHERE lobbyID = ?', [req.body.lobbyID])
+                  .query('UPDATE players SET isReady = False, lobbyID = NULL, joinedLobbyAt = NULL WHERE lobbyID = ?', [req.body.lobbyID])
                   .then((rows) => {
                     conn
                       .query('DELETE FROM lobbies WHERE id = ?', [req.body.lobbyID])
@@ -193,6 +192,7 @@ router.post('/leave', authenticateJWT, express.json(), async (req, res) => {
                         io.to(req.body.lobbyID).emit('close', { message: 'Server Closed' })
                         io.socketsLeave(req.body.lobbyID)
                         console.log(`${logTimestamp} Lobby ${clc.magenta(req.body.lobbyID)} Socket Room Closed`)
+                        res.sendStatus(200)
                       })
                       .catch((err) => {
                         console.log(err)
@@ -205,21 +205,22 @@ router.post('/leave', authenticateJWT, express.json(), async (req, res) => {
                     res.sendStatus(500)
                     conn.end()
                   })
+              } else {
+                conn
+                  .query('UPDATE players SET isReady = False, lobbyid = NULL, joinedLobbyAt = NULL WHERE username = ?', [req.user.username])
+                  .then((response) => {
+                    console.log(`${logTimestamp} ${clc.bold(req.user.username)} Left Lobby`)
+                    io.emit('leave', { username: req.user.username, lobbyID: req.body.lobbyID })
+                    res.sendStatus(200)
+                    conn.end()
+                  })
+                  .catch((err) => {
+                    //handle error
+                    console.log(err)
+                    res.sendStatus(500)
+                    conn.end()
+                  })
               }
-              conn
-                .query('UPDATE players SET lobbyid = NULL, joinedLobbyAt = NULL WHERE username = ?', [req.user.username])
-                .then((response) => {
-                  console.log(`${logTimestamp} ${clc.bold(req.user.username)} Left Lobby`)
-                  io.emit('leave', { username: req.user.username, lobbyID: req.body.lobbyID })
-                  res.sendStatus(200)
-                  conn.end()
-                })
-                .catch((err) => {
-                  //handle error
-                  console.log(err)
-                  res.sendStatus(500)
-                  conn.end()
-                })
             })
             .catch((err) => {
               //handle error
@@ -303,7 +304,7 @@ router.get('/lobby/players/:id', authenticateJWT, (req, res) => {
     .then((conn) => {
       conn
         .query(
-          'SELECT username user, (SELECT CASE WHEN EXISTS (SELECT 1 FROM players, lobbies WHERE players.guid = lobbies.owner AND username = user) THEN TRUE ELSE FALSE END) AS "isOwner" FROM players WHERE lobbyid = ? ORDER BY joinedLobbyAt ASC',
+          'SELECT username user, (SELECT CASE WHEN EXISTS (SELECT 1 FROM players, lobbies WHERE players.guid = lobbies.owner AND username = user) THEN TRUE ELSE FALSE END) AS "isOwner", isReady FROM players WHERE lobbyid = ? ORDER BY joinedLobbyAt ASC',
           [req.params.id]
         )
         .then((rows) => {
@@ -503,7 +504,7 @@ router.post('/register', express.json(), (req, res) => {
               })
               .then((hash) => {
                 conn
-                  .query('INSERT INTO players VALUES (?, ?, ?, ?, NULL, NOW(), NOW(), NULL)', [crypto.randomUUID(), req.body.username, hash, defaultPerms])
+                  .query('INSERT INTO players VALUES (?, ?, ?, ?, FALSE, NULL, NOW(), NOW(), NULL)', [crypto.randomUUID(), req.body.username, hash, defaultPerms])
                   .then((response) => {
                     console.log(`${logTimestamp} Registration ${clc.bold(req.body.username)}`)
                     res.sendStatus(201)

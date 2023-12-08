@@ -248,7 +248,13 @@ router.get('/lobbies', authenticateJWT, (req, res) => {
       conn
         .query('SELECT id, status, (SELECT COUNT(*) FROM players, lobbies WHERE players.lobbyid = lobbies.id) AS "online", maxPlayers FROM lobbies ORDER BY createdAt DESC')
         .then((rows) => {
-          res.json(rows)
+          const serializedRows = rows.map((row) => ({
+            id: row.id.toString(),
+            status: row.status,
+            online: parseInt(row.online),
+            maxPlayers: parseInt(row.maxPlayers)
+          }))
+          res.json(serializedRows)
           conn.end()
         })
         .catch((err) => {

@@ -138,6 +138,16 @@ io.on('connection', (socket) => {
     console.log(`${logTimestamp} Player ${clc.magenta(`${loginData}`)} Logged In Socket ${clc.magenta(`${socket.id}`)}`)
   })
 
+  socket.on('ready', (readyData) => {
+    socket.to(readyData.lobbyID).emit('ready', readyData)
+    console.log(`${logTimestamp} Player ${clc.magenta(`${readyData.username}`)} Ready in Lobby ${clc.magenta(`${readyData.lobbyID}`)}`)
+  })
+
+  socket.on('unready', (unreadyData) => {
+    socket.to(unreadyData.lobbyID).emit('unready', unreadyData)
+    console.log(`${logTimestamp} Player ${clc.magenta(`${unreadyData.username}`)} Not Ready in Lobby ${clc.magenta(`${unreadyData.lobbyID}`)}`)
+  })
+
   socket.on('disconnect', () => {
     console.log(`${logTimestamp} Client Socket ${clc.red(`Disconnected`)} ${clc.magenta(socket.id)}`)
     if (socket.data.lobbyID) {

@@ -303,7 +303,7 @@ router.get('/lobby/players/:id', authenticateJWT, (req, res) => {
     .then((conn) => {
       conn
         .query(
-          'SELECT username user, (SELECT CASE WHEN EXISTS (SELECT 1 FROM players, lobbies WHERE players.guid = lobbies.owner AND username = user) THEN TRUE ELSE FALSE END) AS "isOwner" FROM players WHERE lobbyid = ? ORDER BY joinedLobbyAt DESC',
+          'SELECT username user, (SELECT CASE WHEN EXISTS (SELECT 1 FROM players, lobbies WHERE players.guid = lobbies.owner AND username = user) THEN TRUE ELSE FALSE END) AS "isOwner" FROM players WHERE lobbyid = ? ORDER BY joinedLobbyAt ASC',
           [req.params.id]
         )
         .then((rows) => {

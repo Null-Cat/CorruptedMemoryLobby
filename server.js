@@ -121,17 +121,93 @@ io.on('connection', (socket) => {
 
   socket.on('join', (joinData) => {
     socket.to(joinData.lobbyID).emit('join', joinData)
+    socket.data.lobbyID = joinData.lobbyID
     console.log(`${logTimestamp} Player ${clc.magenta(`${joinData.username}`)} Joined Lobby ${clc.magenta(`${joinData.lobbyID}`)}`)
     socket.join(joinData.lobbyID)
   })
 
   socket.on('leave', (leaveData) => {
     socket.leave(leaveData.lobbyID)
+    socket.data.lobbyID = null
     console.log(`${logTimestamp} Player ${clc.magenta(`${leaveData.username}`)} Left Lobby ${clc.magenta(`${leaveData.lobbyID}`)}`)
     socket.to(leaveData.lobbyID).emit('leave', leaveData)
   })
 
+  socket.on('login', (loginData) => {
+    socket.data.username = loginData
+    console.log(`${logTimestamp} Player ${clc.magenta(`${loginData}`)} Logged In Socket ${clc.magenta(`${socket.id}`)}`)
+  })
+
   socket.on('disconnect', () => {
     console.log(`${logTimestamp} Client Socket ${clc.red(`Disconnected`)} ${clc.magenta(socket.id)}`)
+    if (socket.data.lobbyID) {
+      mariadbPool.pool
+        .getConnection()
+        .then((conn) => {
+          conn
+            .query('SELECT 1 FROM players WHERE lobbyid IS NULL AND username = ?', [socket.data.username])
+            .then((lobbyIDForUserRows) => {
+              if (lobbyIDForUserRows.length > 0) {
+                console.log(`${logTimestamp} ${clc.bold(socket.data.username)} ${clc.red('Not in a Lobby')}`)
+                conn.end()
+                return
+              }
+              conn
+                .query('SELECT 1 FROM players, lobbies WHERE players.guid = lobbies.owner AND lobbyid = ? AND username = ?', [socket.data.lobbyID, socket.data.username])
+                .then((isOwner) => {
+                  if (isOwner.length > 0) {
+                    io.to(socket.data.lobbyID + '/A').emit('command', 'stop')
+                    console.log(`${logTimestamp} Stopping Server ${clc.magenta(socket.data.lobbyID)} As Owner Left`)
+                    conn
+                      .query('UPDATE players SET lobbyID = NULL, joinedLobbyAt = NULL WHERE lobbyID = ?', [socket.data.lobbyID])
+                      .then((rows) => {
+                        conn
+                          .query('DELETE FROM lobbies WHERE id = ?', [socket.data.lobbyID])
+                          .then((rows) => {
+                            console.log(`${logTimestamp} Lobby ${clc.magenta(socket.data.lobbyID)} Deleted`)
+                            io.to(socket.data.lobbyID).emit('close', { message: 'Server Closed' })
+                            io.socketsLeave(socket.data.lobbyID)
+                            console.log(`${logTimestamp} Lobby ${clc.magenta(socket.data.lobbyID)} Socket Room Closed`)
+                          })
+                          .catch((err) => {
+                            console.log(err)
+                            conn.end()
+                          })
+                      })
+                      .catch((err) => {
+                        //handle error
+                        console.log(err)
+                        conn.end()
+                      })
+                  }
+                  conn
+                    .query('UPDATE players SET lobbyid = NULL, joinedLobbyAt = NULL WHERE username = ?', [socket.data.username])
+                    .then((response) => {
+                      console.log(`${logTimestamp} ${clc.bold(socket.data.username)} Left Lobby`)
+                      io.emit('leave', { username: socket.data.username, lobbyID: socket.data.lobbyID })
+                      conn.end()
+                    })
+                    .catch((err) => {
+                      //handle error
+                      console.log(err)
+                      conn.end()
+                    })
+                })
+                .catch((err) => {
+                  //handle error
+                  console.log(err)
+                  conn.end()
+                })
+            })
+            .catch((err) => {
+              //handle error
+              console.log(err)
+              conn.end()
+            })
+        })
+        .catch((err) => {
+          console.log(err)
+        })
+    }
   })
 })

@@ -246,9 +246,9 @@ router.get('/lobbies', authenticateJWT, (req, res) => {
     .getConnection()
     .then((conn) => {
       conn
-        .query('SELECT *, (SELECT COUNT(*) FROM players, lobbies WHERE players.lobbyid = lobbies.id) AS "online" FROM lobbies ORDER BY createdAt DESC')
+        .query('SELECT id, status, (SELECT COUNT(*) FROM players, lobbies WHERE players.lobbyid = lobbies.id) AS "online", maxPlayers FROM lobbies ORDER BY createdAt DESC')
         .then((rows) => {
-          res.send(rows)
+          res.json(rows)
           conn.end()
         })
         .catch((err) => {

@@ -4,7 +4,7 @@ const pool = mariadb.createPool({
   user: 'cm-client',
   database: 'corruptedmemory',
   password: process.env.DB_PASSWORD,
-  connectionLimit: 10
+  connectionLimit: 20
 })
 
 module.exports = { pool }

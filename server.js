@@ -87,7 +87,6 @@ server.listen(port, () => {
 
 io.on('connection', (socket) => {
   console.log(`${logTimestamp} New Socket Connection ${clc.magenta(`${socket.id}`)}`)
-  //const referer = new URL(socket.request.headers.referer)
 
   socket.on('authority', (authorityData) => {
     if (authorityData.authority === 'client') {
@@ -108,11 +107,6 @@ io.on('connection', (socket) => {
   })
 
   socket.on('command', (commandData) => {
-    // if (commandData.lobbyID !== socket.data.lobbyID) {
-    //   console.log(`${logTimestamp} Command ${clc.red('Denied')} ${clc.magenta(`${socket.id}`)} No Authority in ${clc.magenta(`${commandData.lobbyID}`)}`)
-    //   return
-    // }
-    // console.log(`${logTimestamp} Authority ${clc.green('Confirmed')} ${clc.magenta(`${socket.id}`)} ${clc.magenta(`${commandData.lobbyID}`)}`)
     if (commandData.command === 'stop') {
       socket.to(commandData.lobbyID + '/A').emit('command', 'stop')
       console.log(`${logTimestamp} Command ${clc.yellow('Stop')} ${clc.green('Sent')} to Server ${clc.magenta(`${commandData.lobbyID}`)}`)
